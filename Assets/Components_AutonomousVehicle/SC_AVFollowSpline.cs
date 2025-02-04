@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.Splines;
+using Unity.Mathematics;
+
 
 public class SC_AVFollowSpline : MonoBehaviour
 {
@@ -115,11 +117,25 @@ public class SC_AVFollowSpline : MonoBehaviour
             {
                 float t = i / (float)fullSampleCount;
                 float dist = DistAtT(t);
-                if (dist < closestDist)
+                
+                // Check for closest distance only
+                // if (dist < closestDist)
+                // {
+                //     closestDist = dist;
+                //     closestT = t;
+                // }
+
+                // Check for closest distance and direction of spline
+                Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(t));
+                float dotProduct = Vector3.Dot(tangent, transform.forward);
+
+                // Ensure the tangent direction aligns with vehicle's forward direction
+                if (dist < closestDist && dotProduct > 0f) 
                 {
                     closestDist = dist;
                     closestT = t;
                 }
+
             }
 
             lastClosestT = closestT;
@@ -140,7 +156,18 @@ public class SC_AVFollowSpline : MonoBehaviour
                 {
                     float lerpT = Mathf.Lerp(startT, endT, i / (float)localSampleCount);
                     float dist = DistAtT(lerpT);
-                    if (dist < closestDist)
+                    // Check for closest distance only
+                    // if (dist < closestDist)
+                    // {
+                    //     closestDist = dist;
+                    //     closestT = WrapT(lerpT, isClosedLoop);
+                    // }
+
+                    // Check for closest distance and direction of spline
+                    Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(lerpT));
+                    float dotProduct = Vector3.Dot(tangent, transform.forward);
+
+                    if (dist < closestDist && dotProduct > 0f)
                     {
                         closestDist = dist;
                         closestT = WrapT(lerpT, isClosedLoop);
@@ -156,7 +183,18 @@ public class SC_AVFollowSpline : MonoBehaviour
                 {
                     float lerpT = Mathf.Lerp(clampedStart, clampedEnd, i / (float)localSampleCount);
                     float dist = DistAtT(lerpT);
-                    if (dist < closestDist)
+                    // Check for the closest distance only
+                    // if (dist < closestDist)
+                    // {
+                    //     closestDist = dist;
+                    //     closestT = lerpT;
+                    // }
+
+                    // Check for closest distance and direction of spline
+                    Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(lerpT));
+                    float dotProduct = Vector3.Dot(tangent, transform.forward);
+
+                    if (dist < closestDist && dotProduct > 0f)
                     {
                         closestDist = dist;
                         closestT = lerpT;

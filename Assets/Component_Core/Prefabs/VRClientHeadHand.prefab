@@ -6429,7 +6429,7 @@ MonoBehaviour:
   mySpawnType:
     m_InternalValue: 0
   QuestionairPrefab: {fileID: 1853806982428388, guid: bb398da6725f53c4283a5f88c90d86ed, type: 3}
-  m_callibDisplay: {fileID: 0}
+  m_calibDisplay: {fileID: 0}
   MyLineRenderer: []
 --- !u!114 &8281548716836415492
 MonoBehaviour:

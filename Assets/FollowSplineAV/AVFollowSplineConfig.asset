@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: AVFollowSplineConfig
   m_EditorClassIdentifier: 
   lookAheadDistance: 6
-  desiredSpeed: 10
-  Kp_steering: 10
+  desiredSpeed: 6.5
+  Kp_steering: 5
   Ki_steering: 0.2
-  Kd_steering: 0.01
-  Kp_speed: 0.5
-  Ki_speed: 0
-  Kd_speed: 0
+  Kd_steering: 0.05
+  Kp_speed: 2
+  Ki_speed: 0.01
+  Kd_speed: 0.01
