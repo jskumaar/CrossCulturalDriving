@@ -185779,16 +185779,24 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 332628285455080978, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 332628285455080978, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: maxAgentCount
-      value: 20
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 332628285455080978, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: dummyTrafficLight
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 332628285455080978, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: initialSpawnCount
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 630302229446706334, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 738606894100694047, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Name
@@ -185798,7 +185806,19 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 825735556135954579, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 939581900011950085, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 981003532697084769, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1048469351956874602, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
@@ -185862,6 +185882,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3798075043946532694, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4094139726208417599, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -185882,6 +185906,10 @@ PrefabInstance:
       propertyPath: agentPrefabs.Array.data[1]
       value: 
       objectReference: {fileID: 3400212103818724408, guid: 6f933469523a38b43a790c5d45ff3947, type: 3}
+    - target: {fileID: 4135007411830510663, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4421731597955541246, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Name
       value: NavmeshObstacles
@@ -185889,6 +185917,10 @@ PrefabInstance:
     - target: {fileID: 4458469367135574193, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Enabled
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4849901448613841633, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5070595818494756983, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_LocalPosition.x
@@ -185907,12 +185939,32 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Size.x
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Center.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Center.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Center.z
+      value: -22
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_IsTrigger
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7239165255979097569, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Enabled
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7349455234161435005, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7356754653084111921, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Enabled

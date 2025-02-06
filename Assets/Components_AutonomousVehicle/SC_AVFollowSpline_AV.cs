@@ -8,7 +8,11 @@ public class SC_AVFollowSpline : MonoBehaviour
 {
     public SplineContainer splineContainer;
     public NetworkVehicleController vehicleController; 
-    public SO_AVFollowSplineConfig config;
+    // public SO_AVFollowSplineConfig config;
+
+    public SO_AVFollowSplineConfig ecoConfig;
+    public SO_AVFollowSplineConfig sportyConfig;
+    private SO_AVFollowSplineConfig currentConfig;
     
     private float steeringIntegral = 0f;
     private float steeringPrevError = 0f;
@@ -35,8 +39,24 @@ public class SC_AVFollowSpline : MonoBehaviour
     void Start()
     {
         rb = vehicleController.GetComponent<Rigidbody>();
+        currentConfig = ecoConfig; // Start in Eco Mode
     }
 
+    // Change the driving mode based on the trigger ID
+    public void TriggerDrivingModeChange(string triggerID)
+    {
+        if (triggerID.contains("EcoMarker"))
+        {
+            currentConfig = ecoConfig;
+            Debug.Log("Switched to Eco Mode");
+        }
+        else if (triggerID.contains("SportyMarker"))
+        {
+            currentConfig = sportyConfig;
+            Debug.Log("Switched to Sporty Mode");
+        }
+    }
+    
 
     private void Update() {
         if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
@@ -57,7 +77,7 @@ public class SC_AVFollowSpline : MonoBehaviour
         _closestT = FindClosestTOnSpline(spline, vehiclePos, isClosedLoop);
         _closestPoint = splineContainer.EvaluatePosition(_closestT);
 
-        float lookDistanceNormalized = config.lookAheadDistance / spline.GetLength();
+        float lookDistanceNormalized = currentConfig.lookAheadDistance / spline.GetLength();
         
         // tentative wrapping solution
         _lookT = WrapT(_closestT + lookDistanceNormalized, isClosedLoop);
@@ -68,16 +88,16 @@ public class SC_AVFollowSpline : MonoBehaviour
         _headingError = Vector3.SignedAngle(vehicleForward, _toTarget, Vector3.up) * Mathf.Deg2Rad;
         
         float currentSpeed = rb.velocity.magnitude;
-        float speedError = config.desiredSpeed - currentSpeed;
+        float speedError = currentConfig.desiredSpeed - currentSpeed;
 
         // Steering PID
         float steeringControl = PIDControl(_headingError, ref steeringIntegral, ref steeringPrevError, 
-                                           config.Kp_steering, config.Ki_steering, config.Kd_steering);
+                                           currentConfig.Kp_steering, currentConfig.Ki_steering, currentConfig.Kd_steering);
         steeringControl = Mathf.Clamp(steeringControl, -1f, 1f);
 
         // Speed PID
         float throttleControl = PIDControl(speedError, ref speedIntegral, ref speedPrevError, 
-                                           config.Kp_speed, config.Ki_speed, config.Kd_speed);
+                                           currentConfig.Kp_speed, currentConfig.Ki_speed, currentConfig.Kd_speed);
         throttleControl = Mathf.Clamp(throttleControl, -1f, 1f);
 
         vehicleController.SteeringInput = steeringControl;
