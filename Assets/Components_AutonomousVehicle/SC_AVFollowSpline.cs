@@ -37,7 +37,6 @@ public class SC_AVFollowSpline : MonoBehaviour
         rb = vehicleController.GetComponent<Rigidbody>();
     }
 
-
     private void Update() {
         if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
             IsDriving = !IsDriving;

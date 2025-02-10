@@ -7,8 +7,6 @@ public class StartleTrigger : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"Marker {triggerID} detecting entry of: {other.gameObject.name} with tag {other.gameObject.tag}");
-
         if (other.CompareTag("Player") && !hasCarEntered)
         {
             Debug.Log($"Car entered trigger zone: {triggerID}");
@@ -17,16 +15,11 @@ public class StartleTrigger : MonoBehaviour
             VehicleDataBroadcaster.Instance.TriggerEntered(triggerID); // Notify broadcaster
             
             NavigationScreenSS.TriggerIconChange(triggerID); // Notify NavigationScreenSS to update the GPS screen
-
-            SC_AVFollowSpline.TriggerDrivingModeChange(triggerID); // Notify SC_AVFollowSpline to change driving mode
-
         }
     }
 
     void OnTriggerExit(Collider other)
     {
-        Debug.Log($"Marker {triggerID} detecting exit of: {other.gameObject.name} with tag {other.gameObject.tag}");
-
         if (other.CompareTag("Player") && hasCarEntered)
         {
             Debug.Log($"Car exited trigger zone: {triggerID}");
