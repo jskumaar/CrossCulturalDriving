@@ -13,12 +13,13 @@ public class NavigationScreenSS : ReplayBehaviour
         Right,
         vague_icon,
         warning,
+        pedestrian,
         blankScreen  // Ensure this is the default until a trigger is hit
     }
 
     [ReplayVar(false)] public int recordingIconType = (int)IconType.blankScreen;
 
-    public Sprite vagueIconImage, warningIconImage, straightImage, leftImage, rightImage, blankScreen;
+    public Sprite vagueIconImage, pedestrianImage, warningIconImage, straightImage, leftImage, rightImage, blankScreen;
     public Image gpsImagePlane;
     public IconType defaultIconType;
     private AudioSource GpsAudioPlayer;
@@ -28,7 +29,7 @@ public class NavigationScreenSS : ReplayBehaviour
     private Dictionary<string, IconType> triggerIconMap = new Dictionary<string, IconType>()
     {
         { "Trigger_Straight", IconType.Straight },
-        { "alert_trigger_1", IconType.Left },
+        { "alert_trigger_1", IconType.pedestrian },
         { "alert_trigger_2", IconType.Right },
         { "Trigger_Warning", IconType.warning },
         { "alert_trigger_3", IconType.vague_icon },
@@ -92,6 +93,8 @@ public class NavigationScreenSS : ReplayBehaviour
                 return leftImage;
             case IconType.Right:
                 return rightImage;
+            case IconType.pedestrian:
+                return pedestrianImage;
             case IconType.blankScreen:
                 return blankScreen;
             default:

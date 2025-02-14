@@ -11,8 +11,17 @@ public class StartleTrigger : MonoBehaviour
         {
             Debug.Log($"Car entered trigger zone: {triggerID}");
             hasCarEntered = true;
-            
-            VehicleDataBroadcaster.Instance.TriggerEntered(triggerID); // Notify broadcaster
+
+            if (CommunicationManager.Instance == null)
+            {
+                Debug.Log("CommunicationManager.Instance is null in StartleTrigger!");
+            }
+            else
+            {
+                Debug.Log("CommunicationManager.Instance found in StartleTrigger.");
+            }
+            // CommunicationManager.Instance.TriggerEntered(triggerID); // Notify broadcaster
+            CommunicationManager.Instance.SendMessageToServer($"TRIGGER_ENTERED: {triggerID}");
             
             NavigationScreenSS.TriggerIconChange(triggerID); // Notify NavigationScreenSS to update the GPS screen
         }
@@ -24,7 +33,9 @@ public class StartleTrigger : MonoBehaviour
         {
             Debug.Log($"Car exited trigger zone: {triggerID}");
             hasCarEntered = false;
-            VehicleDataBroadcaster.Instance.TriggerExited(triggerID); // Notify broadcaster
+
+            // CommunicationManager.Instance.TriggerExited(triggerID); // Notify broadcaster
+            CommunicationManager.Instance.SendMessageToServer($"TRIGGER_EXITED: {triggerID}");
         }
     }
 }
