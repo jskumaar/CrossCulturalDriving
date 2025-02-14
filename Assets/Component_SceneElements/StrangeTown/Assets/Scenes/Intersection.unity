@@ -185779,6 +185779,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 332628285455080978, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 332628285455080978, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: maxAgentCount
       value: 10
       objectReference: {fileID: 0}
@@ -185866,6 +185870,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3731942448166028788, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_TagString
+      value: CrowdAgent
+      objectReference: {fileID: 0}
     - target: {fileID: 4094139726208417599, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -185909,6 +185917,18 @@ PrefabInstance:
     - target: {fileID: 7004034972253908126, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_Enabled
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Size.x
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Center.x
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      propertyPath: m_Center.z
+      value: -32
       objectReference: {fileID: 0}
     - target: {fileID: 7168583733201869202, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       propertyPath: m_IsTrigger
@@ -185969,6 +185989,18 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3731942448166028788, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1970537912}
+    - targetCorrespondingSourceObject: {fileID: 3731942448166028788, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1970537914}
+    - targetCorrespondingSourceObject: {fileID: 3731942448166028788, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1970537915}
+    - targetCorrespondingSourceObject: {fileID: 3731942448166028788, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1970537916}
+    - targetCorrespondingSourceObject: {fileID: 3731942448166028788, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1970537917}
   m_SourcePrefab: {fileID: 100100000, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
 --- !u!1 &1970537909 stripped
 GameObject:
@@ -186006,6 +186038,100 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4cc25689b3d4b2f8c7528702a786818, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &1970537913 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8049820746273681336, guid: e0f210ee7af7ecf4bbddaf518d3a1730, type: 3}
+  m_PrefabInstance: {fileID: 1970537908}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1970537914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970537911}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4a9845a188c8354caad2cc829fc6f86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agentPrefabs:
+  - {fileID: 3400212103818724408, guid: fb7bb4dd2f6d6e546b4e60d15e4a9a7c, type: 3}
+  - {fileID: 3400212103818724408, guid: 6f933469523a38b43a790c5d45ff3947, type: 3}
+  initialSpawnCount: 10
+  agentSpawn: {fileID: 1970537913}
+  agentInstances: []
+  maxAgentCount: 50
+  spawnOnStart: 1
+  spawnOverTime: 1
+  spawnRate: 0.1
+  maxAgentCountPerArea: 20
+--- !u!65 &1970537915
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970537911}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 14, y: 5, z: 50}
+  m_Center: {x: 4, y: 0, z: 28}
+--- !u!114 &1970537916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970537911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16bf576f74ca299438e5e475f83c82e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agentPrefabs:
+  - {fileID: 3400212103818724408, guid: fb7bb4dd2f6d6e546b4e60d15e4a9a7c, type: 3}
+  - {fileID: 3400212103818724408, guid: 6f933469523a38b43a790c5d45ff3947, type: 3}
+  initialSpawnCount: 10
+  agentSpawn: {fileID: 1970537913}
+  agentInstances: []
+  maxAgentCount: 15
+  spawnOnStart: 0
+  spawnOverTime: 1
+  spawnRate: 1
+  dummyTrafficLight: 0
+  maxAgentCountPerArea: 5
+--- !u!65 &1970537917
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970537911}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 76, y: 5, z: 13}
+  m_Center: {x: -40, y: 0, z: -1}
 --- !u!1001 &1971295062
 PrefabInstance:
   m_ObjectHideFlags: 0
