@@ -13,6 +13,7 @@ public class NavigationScreenSS : ReplayBehaviour
         Right,
         vague_icon,
         warning,
+        stop,
         car,
         pedestrian,
         blankScreen  // Ensure this is the default until a trigger is hit
@@ -20,7 +21,7 @@ public class NavigationScreenSS : ReplayBehaviour
 
     [ReplayVar(false)] public int recordingIconType = (int)IconType.blankScreen;
 
-    public Sprite vagueIconImage, pedestrianImage, warningIconImage, carImage, straightImage, leftImage, rightImage, blankScreen;
+    public Sprite vagueIconImage, pedestrianImage, warningIconImage, stopIconImage, carImage, straightImage, leftImage, rightImage, blankScreen;
     public Image gpsImagePlane;
     public IconType defaultIconType;
     private AudioSource GpsAudioPlayer;
@@ -36,12 +37,14 @@ public class NavigationScreenSS : ReplayBehaviour
         { "surprise_alert_trigger_1", IconType.car },
         { "surprise_alert_trigger_2", IconType.Right },
         { "surprise_alert_trigger_3", IconType.warning },
+        { "frustration_alert_trigger_3", IconType.stop},
         { "confusion_alert_trigger_1_action_end", IconType.blankScreen },
         { "confusion_alert_trigger_2_action_end", IconType.blankScreen },
         { "confusion_alert_trigger_3_action_end", IconType.blankScreen },
         { "surprise_alert_trigger_1_action_end", IconType.blankScreen },
         { "surprise_alert_trigger_2_action_end", IconType.blankScreen },
-        { "surprise_alert_trigger_3_action_end", IconType.blankScreen }
+        { "surprise_alert_trigger_3_action_end", IconType.blankScreen },
+        { "frustration_alert_trigger_3_action_end", IconType.blankScreen }
     };
 
     // Event subscription for triggers
@@ -103,6 +106,8 @@ public class NavigationScreenSS : ReplayBehaviour
                 return pedestrianImage;
             case IconType.car:
                 return carImage;
+            case IconType.stop:
+                return stopIconImage;
             case IconType.blankScreen:
                 return blankScreen;
             default:

@@ -15,4 +15,6 @@ public class SO_AVFollowSplineConfig : ScriptableObject
     public float Kp_speed = 0.5f;
     public float Ki_speed = 0.0f;
     public float Kd_speed = 0.1f;
+
+    public float decelerationRate = 2.0f;
 }
