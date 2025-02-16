@@ -13,13 +13,14 @@ public class NavigationScreenSS : ReplayBehaviour
         Right,
         vague_icon,
         warning,
+        car,
         pedestrian,
         blankScreen  // Ensure this is the default until a trigger is hit
     }
 
     [ReplayVar(false)] public int recordingIconType = (int)IconType.blankScreen;
 
-    public Sprite vagueIconImage, pedestrianImage, warningIconImage, straightImage, leftImage, rightImage, blankScreen;
+    public Sprite vagueIconImage, pedestrianImage, warningIconImage, carImage, straightImage, leftImage, rightImage, blankScreen;
     public Image gpsImagePlane;
     public IconType defaultIconType;
     private AudioSource GpsAudioPlayer;
@@ -29,13 +30,18 @@ public class NavigationScreenSS : ReplayBehaviour
     private Dictionary<string, IconType> triggerIconMap = new Dictionary<string, IconType>()
     {
         { "Trigger_Straight", IconType.Straight },
-        { "alert_trigger_1", IconType.pedestrian },
-        { "alert_trigger_2", IconType.Right },
-        { "Trigger_Warning", IconType.warning },
-        { "alert_trigger_3", IconType.vague_icon },
-        { "alert_trigger_1_action_end", IconType.blankScreen },
-        { "alert_trigger_2_action_end", IconType.blankScreen },
-        { "alert_trigger_3_action_end", IconType.blankScreen }
+        { "confusion_alert_trigger_1", IconType.pedestrian },
+        { "confusion_alert_trigger_2", IconType.Right },
+        { "confusion_alert_trigger_3", IconType.vague_icon },
+        { "surprise_alert_trigger_1", IconType.car },
+        { "surprise_alert_trigger_2", IconType.Right },
+        { "surprise_alert_trigger_3", IconType.warning },
+        { "confusion_alert_trigger_1_action_end", IconType.blankScreen },
+        { "confusion_alert_trigger_2_action_end", IconType.blankScreen },
+        { "confusion_alert_trigger_3_action_end", IconType.blankScreen },
+        { "surprise_alert_trigger_1_action_end", IconType.blankScreen },
+        { "surprise_alert_trigger_2_action_end", IconType.blankScreen },
+        { "surprise_alert_trigger_3_action_end", IconType.blankScreen }
     };
 
     // Event subscription for triggers
@@ -95,6 +101,8 @@ public class NavigationScreenSS : ReplayBehaviour
                 return rightImage;
             case IconType.pedestrian:
                 return pedestrianImage;
+            case IconType.car:
+                return carImage;
             case IconType.blankScreen:
                 return blankScreen;
             default:

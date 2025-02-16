@@ -3,17 +3,17 @@
 // using UnityEngine.Splines;
 // using Unity.Mathematics;
 
-
 // public class SC_AVFollowSplineEgo : MonoBehaviour
 // {
 //     public SplineContainer splineContainer;
 //     public NetworkVehicleController vehicleController; 
-//     // public SO_AVFollowSplineConfig config;
-
-//     public SO_AVFollowSplineConfig ecoConfig;
+//     public SO_AVFollowSplineConfig normalConfig;
 //     public SO_AVFollowSplineConfig sportyConfig;
+//     public SO_AVFollowSplineConfig ecoConfig;
+//     public SO_AVFollowSplineConfig stopConfig;
+
 //     private SO_AVFollowSplineConfig currentConfig;
-    
+
 //     private float steeringIntegral = 0f;
 //     private float steeringPrevError = 0f;
 
@@ -22,7 +22,6 @@
     
 //     private Rigidbody rb;
 
-//     // for gizmos
 //     private float _closestT;
 //     private Vector3 _closestPoint;
 //     private float _lookT;
@@ -32,31 +31,14 @@
 
 //     public bool IsDriving = false;
 
-//     // variable for maintain continuity of the closest point
 //     private bool initializedClosestT = false;
 //     private float lastClosestT = 0f;
 
 //     void Start()
 //     {
 //         rb = vehicleController.GetComponent<Rigidbody>();
-//         currentConfig = ecoConfig; // Start in Eco Mode
+//         currentConfig = normalConfig;
 //     }
-
-//     // Change the driving mode based on the trigger ID
-//     public static void TriggerDrivingModeChange(string triggerID)
-//     {
-//         if (triggerID.Contains("EcoMarker"))
-//         {
-//             currentConfig = ecoConfig;
-//             Debug.Log("Switched to Eco Mode");
-//         }
-//         else if (triggerID.Contains("SportyMarker"))
-//         {
-//             currentConfig = sportyConfig;
-//             Debug.Log("Switched to Sporty Mode");
-//         }
-//     }
-    
 
 //     private void Update() {
 //         if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
@@ -70,6 +52,8 @@
 //             return;
 //         }
 
+//         UpdateConfigBasedOnMarker();
+
 //         var spline = splineContainer.Spline;
 //         bool isClosedLoop = spline.Closed;
 
@@ -78,8 +62,6 @@
 //         _closestPoint = splineContainer.EvaluatePosition(_closestT);
 
 //         float lookDistanceNormalized = currentConfig.lookAheadDistance / spline.GetLength();
-        
-//         // tentative wrapping solution
 //         _lookT = WrapT(_closestT + lookDistanceNormalized, isClosedLoop);
 //         _lookPoint = splineContainer.EvaluatePosition(_lookT);
 
@@ -90,18 +72,44 @@
 //         float currentSpeed = rb.velocity.magnitude;
 //         float speedError = currentConfig.desiredSpeed - currentSpeed;
 
-//         // Steering PID
 //         float steeringControl = PIDControl(_headingError, ref steeringIntegral, ref steeringPrevError, 
 //                                            currentConfig.Kp_steering, currentConfig.Ki_steering, currentConfig.Kd_steering);
 //         steeringControl = Mathf.Clamp(steeringControl, -1f, 1f);
 
-//         // Speed PID
 //         float throttleControl = PIDControl(speedError, ref speedIntegral, ref speedPrevError, 
 //                                            currentConfig.Kp_speed, currentConfig.Ki_speed, currentConfig.Kd_speed);
 //         throttleControl = Mathf.Clamp(throttleControl, -1f, 1f);
 
 //         vehicleController.SteeringInput = steeringControl;
 //         vehicleController.ThrottleInput = throttleControl;
+//     }
+
+//     private void UpdateConfigBasedOnMarker()
+//     {
+//         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 5f);
+//         foreach (var hitCollider in hitColliders)
+//         {
+//             if (hitCollider.CompareTag("NormalMarker"))
+//             {
+//                 currentConfig = normalConfig;
+//                 break;
+//             }
+//             else if (hitCollider.CompareTag("SportyMarker"))
+//             {
+//                 currentConfig = sportyConfig;
+//                 break;
+//             }
+//             else if (hitCollider.CompareTag("EcoMarker"))
+//             {
+//                 currentConfig = ecoConfig;
+//                 break;
+//             }
+//             else if (hitCollider.CompareTag("StopMarker"))
+//             {
+//                 currentConfig = stopConfig;
+//                 break;
+//             }
+//         }
 //     }
 
 //     private float PIDControl(float error, ref float integral, ref float prevError, float Kp, float Ki, float Kd)
@@ -120,7 +128,7 @@
 //     {
 //         int fullSampleCount = 200; 
 //         int localSampleCount = 50;
-//         float searchRadius = 0.05f; // to accomodate self intersection like 8 shape course
+//         float searchRadius = 0.05f;
 
 //         float DistAtT(float t)
 //         {
@@ -138,19 +146,9 @@
 //             {
 //                 float t = i / (float)fullSampleCount;
 //                 float dist = DistAtT(t);
-                
-//                 // Check for closest distance only
-//                 // if (dist < closestDist)
-//                 // {
-//                 //     closestDist = dist;
-//                 //     closestT = t;
-//                 // }
-
-//                 // Check for closest distance and direction of spline
 //                 Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(t));
 //                 float dotProduct = Vector3.Dot(tangent, transform.forward);
 
-//                 // Ensure the tangent direction aligns with vehicle's forward direction
 //                 if (dist < closestDist && dotProduct > 0f) 
 //                 {
 //                     closestDist = dist;
@@ -171,55 +169,17 @@
 //             float closestT = lastClosestT;
 //             float closestDist = DistAtT(lastClosestT);
 
-//             if (isClosedLoop)
+//             for (int i = 0; i <= localSampleCount; i++)
 //             {
-//                 for (int i = 0; i <= localSampleCount; i++)
+//                 float lerpT = Mathf.Lerp(startT, endT, i / (float)localSampleCount);
+//                 float dist = DistAtT(lerpT);
+//                 Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(lerpT));
+//                 float dotProduct = Vector3.Dot(tangent, transform.forward);
+
+//                 if (dist < closestDist && dotProduct > 0f)
 //                 {
-//                     float lerpT = Mathf.Lerp(startT, endT, i / (float)localSampleCount);
-//                     float dist = DistAtT(lerpT);
-//                     // Check for closest distance only
-//                     // if (dist < closestDist)
-//                     // {
-//                     //     closestDist = dist;
-//                     //     closestT = WrapT(lerpT, isClosedLoop);
-//                     // }
-
-//                     // Check for closest distance and direction of spline
-//                     Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(lerpT));
-//                     float dotProduct = Vector3.Dot(tangent, transform.forward);
-
-//                     if (dist < closestDist && dotProduct > 0f)
-//                     {
-//                         closestDist = dist;
-//                         closestT = WrapT(lerpT, isClosedLoop);
-//                     }
-//                 }
-//             }
-//             else
-//             {
-//                 float clampedStart = Mathf.Clamp01(startT);
-//                 float clampedEnd = Mathf.Clamp01(endT);
-
-//                 for (int i = 0; i <= localSampleCount; i++)
-//                 {
-//                     float lerpT = Mathf.Lerp(clampedStart, clampedEnd, i / (float)localSampleCount);
-//                     float dist = DistAtT(lerpT);
-//                     // Check for the closest distance only
-//                     // if (dist < closestDist)
-//                     // {
-//                     //     closestDist = dist;
-//                     //     closestT = lerpT;
-//                     // }
-
-//                     // Check for closest distance and direction of spline
-//                     Vector3 tangent = (Vector3)math.normalize(spline.EvaluateTangent(lerpT));
-//                     float dotProduct = Vector3.Dot(tangent, transform.forward);
-
-//                     if (dist < closestDist && dotProduct > 0f)
-//                     {
-//                         closestDist = dist;
-//                         closestT = lerpT;
-//                     }
+//                     closestDist = dist;
+//                     closestT = WrapT(lerpT, isClosedLoop);
 //                 }
 //             }
 
@@ -259,4 +219,4 @@
 //             Gizmos.DrawLine(transform.position, transform.position + errorVector * 5f);
 //         }
 //     }
-// }
+// } 

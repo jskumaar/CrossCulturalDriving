@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e4de25e38323b949bef2ee28e2f733e, type: 3}
-  m_Name: AVFollowSplineConfig_Eco
+  m_Name: AVFollowSplineConfig_Stop
   m_EditorClassIdentifier: 
-  lookAheadDistance: 8
-  desiredSpeed: 5
-  Kp_steering: 4
-  Ki_steering: 0.1
+  lookAheadDistance: 6
+  desiredSpeed: 6.5
+  Kp_steering: 5
+  Ki_steering: 0.2
   Kd_steering: 0.05
-  Kp_speed: 1
+  Kp_speed: 2
   Ki_speed: 0.01
   Kd_speed: 0.01
