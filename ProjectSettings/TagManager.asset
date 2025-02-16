@@ -19,6 +19,7 @@ TagManager:
   - Intersection
   - CrowdAgent
   - InteractionMarkers
+  - ProgressMarkers
   layers:
   - Default
   - TransparentFX

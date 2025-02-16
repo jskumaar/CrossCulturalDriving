@@ -244,6 +244,8 @@ public class CommunicationManager : MonoBehaviour
     private ManualResetEvent messageEvent = new ManualResetEvent(false);
     private ManualResetEvent receiveEvent = new ManualResetEvent(false);
 
+    private ScenarioManagerStartle scenarioManager;
+
     void Awake()
     {
         if (Instance == null)
@@ -260,8 +262,7 @@ public class CommunicationManager : MonoBehaviour
 
     void Start()
     {
-        // Cache markers for performance
-        CacheInteractionMarkers();
+        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
 
         // Initialize UDP client for sending
         udpClient = new UdpClient();
@@ -274,18 +275,6 @@ public class CommunicationManager : MonoBehaviour
         // Start sending thread
         sendThread = new Thread(SendLoop) { IsBackground = true };
         sendThread.Start();
-    }
-
-    // Cache markers for efficient lookups
-    private void CacheInteractionMarkers()
-    {
-        GameObject[] allMarkers = GameObject.FindGameObjectsWithTag("InteractionMarkers");
-        foreach (GameObject marker in allMarkers)
-        {
-            markerDictionary[marker.name.ToLower()] = marker;
-            marker.SetActive(false);
-        }
-        Debug.Log($"[CommunicationManager] Cached {markerDictionary.Count} markers.");
     }
 
     // Threaded message receiving
@@ -355,38 +344,23 @@ public class CommunicationManager : MonoBehaviour
     // Process received messages
     private void ProcessReceivedMessage(string message)
     {
-        Debug.Log($"[CommunicationManager] Processing: {message}");
-
         string[] stimuli = { "surprise", "confusion", "frustration" };
         string[] scenarios = { "alert", "driving" };
 
-        string selectedStimulus = null;
-        string selectedScenario = null;
+        scenarioManager.currentStimulus = null;
+        scenarioManager.currentScenario = null;
 
-        // Identify stimulus and scenario from the message
         foreach (var stim in stimuli)
             if (message.ToLower().Contains(stim))
-                selectedStimulus = stim;
+                scenarioManager.currentStimulus = stim;
 
         foreach (var scenario in scenarios)
             if (message.ToLower().Contains(scenario))
-                selectedScenario = scenario;
+                scenarioManager.currentScenario = scenario;
 
-        // Activate or deactivate markers based on parsed message
-        if (selectedStimulus != null && selectedScenario != null)
-        {
-            foreach (var markerEntry in markerDictionary)
-            {
-                bool shouldActivate = markerEntry.Key.Contains(selectedStimulus) && markerEntry.Key.Contains(selectedScenario);
-                markerEntry.Value.SetActive(shouldActivate);
-                Debug.Log($"{(shouldActivate ? "Activated" : "Deactivated")} marker: {markerEntry.Key}");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Invalid stimulus or scenario.");
-        }
+        Debug.Log($"Scenario updated: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
     }
+
 
     // Send a message via UDP
     private void SendMessageOverUDP(string message)

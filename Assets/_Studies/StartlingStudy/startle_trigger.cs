@@ -4,6 +4,8 @@ public class StartleTrigger : MonoBehaviour
 {
     public string triggerID;
     private bool hasCarEntered = false;  // Ensures one enter event per trigger
+    private ScenarioManagerStartle scenarioManager;
+
 
     void OnTriggerEnter(Collider other)
     {
@@ -24,6 +26,17 @@ public class StartleTrigger : MonoBehaviour
             CommunicationManager.Instance.SendMessageToServer($"TRIGGER_ENTERED: {triggerID}");
             
             NavigationScreenSS.TriggerIconChange(triggerID); // Notify NavigationScreenSS to update the GPS screen
+
+
+            if (this.gameObject.name.Contains("3 action end"))
+            {
+                Debug.Log("All interactions completed for this scenario.");
+                scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+                scenarioManager.currentStimulus = "random";
+                scenarioManager.currentScenario = "random";
+            }
+
+
         }
     }
 
