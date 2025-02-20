@@ -14,13 +14,21 @@ public class MarkerActivator : MonoBehaviour
     void Start()
     {
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
-        CacheInteractionMarkers();
+        CacheMarkers();
     }
 
     // Cache markers for efficient lookups
-    private void CacheInteractionMarkers()
+    private void CacheMarkers()
     {
-        GameObject[] allMarkers = GameObject.FindGameObjectsWithTag("InteractionMarkers");
+        // GameObject[] allMarkers = GameObject.FindGameObjectsWithTag("InteractionMarkers");
+        GameObject[] allMarkers = GameObject.FindObjectsOfType<GameObject>();
+        allMarkers = System.Array.FindAll(allMarkers, marker => 
+            marker.CompareTag("InteractionMarkers") ||
+            marker.CompareTag("EcoMarker") ||
+            marker.CompareTag("StopMarker") ||
+            marker.CompareTag("NormalMarker") ||
+            marker.CompareTag("SportyMarker")
+        );
         foreach (GameObject marker in allMarkers)
         {
             markerDictionary[marker.name.ToLower()] = marker;

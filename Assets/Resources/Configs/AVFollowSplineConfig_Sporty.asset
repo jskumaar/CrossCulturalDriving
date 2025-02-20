@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: AVFollowSplineConfig_Sporty
   m_EditorClassIdentifier: 
   lookAheadDistance: 6
-  desiredSpeed: 8
+  desiredSpeed: 9
   Kp_steering: 6
   Ki_steering: 0.2
   Kd_steering: 0.05
-  Kp_speed: 5
+  Kp_speed: 4
   Ki_speed: 0.02
   Kd_speed: 0.01
   decelerationRate: 4

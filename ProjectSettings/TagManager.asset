@@ -20,6 +20,10 @@ TagManager:
   - CrowdAgent
   - InteractionMarkers
   - ProgressMarkers
+  - EcoMarker
+  - SportyMarker
+  - NormalMarker
+  - StopMarker
   layers:
   - Default
   - TransparentFX
