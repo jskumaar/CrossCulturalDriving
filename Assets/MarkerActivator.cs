@@ -10,12 +10,21 @@ public class MarkerActivator : MonoBehaviour
     private HashSet<int> passedMarkers = new HashSet<int>();
     private bool interactionMarkersActivated = false;
     private Dictionary<string, GameObject> markerDictionary = new Dictionary<string, GameObject>();
+    private Dictionary<string, GameObject> trafficCarDictionary = new Dictionary<string, GameObject>();
 
     void Start()
     {
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+        Debug.Log($"[MarkerActivator] ScenarioManager: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
         CacheMarkers();
     }
+
+    // public void updateScenario(string stimulus, string scenario)
+    // {
+    //     scenarioManager.currentStimulus = stimulus;
+    //     scenarioManager.currentScenario = scenario;
+    //     Debug.Log($"[MarkerActivator] Scenario updated to: {stimulus}, {scenario}");
+    // }
 
     // Cache markers for efficient lookups
     private void CacheMarkers()
@@ -37,8 +46,23 @@ public class MarkerActivator : MonoBehaviour
         Debug.Log($"[MarkerActivator] Cached {markerDictionary.Count} markers.");
     }
 
+    private void TrafficCars()
+    {
+        // Implement logic to manage traffic cars
+        GameObject[] trafficCars = GameObject.FindGameObjectsWithTag("TrafficCar");
+
+        // cache the traffic cars
+        foreach (GameObject car in trafficCars)
+        {
+            trafficCarDictionary[car.name.ToLower()] = car;
+            car.SetActive(false);
+        }
+        Debug.Log($"[MarkerActivator] Cached {trafficCarDictionary.Count} traffic cars.");
+    }
+
     void OnTriggerEnter(Collider other)
     {
+        
         if (other.CompareTag("ProgressMarkers") && other.name.StartsWith("ProgressMarker_"))
         {
             int markerNumber;
@@ -54,7 +78,9 @@ public class MarkerActivator : MonoBehaviour
 
                 if ((progress < 0.2f || progress >= 0.9f) && !interactionMarkersActivated)
                 {
+                    scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
                     ActivateInteractionMarkers();
+                    // ActivateTrafficCars();
                     interactionMarkersActivated = true;
                 }
 
@@ -69,6 +95,7 @@ public class MarkerActivator : MonoBehaviour
 
     private void ActivateInteractionMarkers()
     {
+
         foreach (var kvp in markerDictionary)
         {
             string markerName = kvp.Key;
@@ -83,6 +110,27 @@ public class MarkerActivator : MonoBehaviour
             else
             {
                 marker.SetActive(false);
+            }
+        }
+    }
+
+
+    private void ActivateTrafficCars()
+    {
+        foreach (var kvp in trafficCarDictionary)
+        {
+            string carName = kvp.Key;
+            GameObject car = kvp.Value;
+
+            if (carName.Contains(scenarioManager.currentStimulus) &&
+                carName.Contains(scenarioManager.currentScenario))
+            {
+                car.SetActive(true);
+                Debug.Log($"Activated traffic car: {car.name}");
+            }
+            else
+            {
+                car.SetActive(false);
             }
         }
     }

@@ -32,23 +32,29 @@ public class NavigationScreenSS : ReplayBehaviour
     {
         { "Trigger_Straight", IconType.Straight },
         { "confusion_alert_trigger_1", IconType.pedestrian },
-        { "confusion_alert_trigger_2", IconType.Right },
+        { "confusion_alert_trigger_2", IconType.Left },
         { "confusion_alert_trigger_3", IconType.vague_icon },
-        { "surprise_alert_trigger_1", IconType.car },
-        { "surprise_alert_trigger_2", IconType.Right },
+        { "confusion_alert_trigger_4", IconType.car },
+        { "surprise_alert_trigger_1", IconType.Right },
+        { "surprise_alert_trigger_2", IconType.car },
         { "surprise_alert_trigger_3", IconType.warning },
+        { "surprise_alert_trigger_4", IconType.Right },
         { "frustration_alert_trigger_1", IconType.Left },
         { "frustration_alert_trigger_2", IconType.Right },
         { "frustration_alert_trigger_3", IconType.stop },
+        { "frustration_alert_trigger_4", IconType.pedestrian },
         { "confusion_alert_trigger_1_action_end", IconType.blankScreen },
         { "confusion_alert_trigger_2_action_end", IconType.blankScreen },
         { "confusion_alert_trigger_3_action_end", IconType.blankScreen },
+        { "confusion_alert_trigger_4_action_end", IconType.blankScreen },
         { "surprise_alert_trigger_1_action_end", IconType.blankScreen },
         { "surprise_alert_trigger_2_action_end", IconType.blankScreen },
         { "surprise_alert_trigger_3_action_end", IconType.blankScreen },
+        { "surprise_alert_trigger_4_action_end", IconType.blankScreen },
         { "frustration_alert_trigger_1_action_end", IconType.blankScreen },
         { "frustration_alert_trigger_2_action_end", IconType.blankScreen },
-        { "frustration_alert_trigger_3_action_end", IconType.blankScreen }
+        { "frustration_alert_trigger_3_action_end", IconType.blankScreen },
+        { "frustration_alert_trigger_4_action_end", IconType.blankScreen }
     };
 
     // Event subscription for triggers

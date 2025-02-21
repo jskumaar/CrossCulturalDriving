@@ -24,6 +24,7 @@ TagManager:
   - SportyMarker
   - NormalMarker
   - StopMarker
+  - TrafficCar
   layers:
   - Default
   - TransparentFX

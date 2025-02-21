@@ -347,9 +347,6 @@ public class CommunicationManager : MonoBehaviour
         string[] stimuli = { "surprise", "confusion", "frustration" };
         string[] scenarios = { "alert", "driving" };
 
-        scenarioManager.currentStimulus = null;
-        scenarioManager.currentScenario = null;
-
         foreach (var stim in stimuli)
             if (message.ToLower().Contains(stim))
                 scenarioManager.currentStimulus = stim;
@@ -359,6 +356,7 @@ public class CommunicationManager : MonoBehaviour
                 scenarioManager.currentScenario = scenario;
 
         Debug.Log($"Scenario updated: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
+        
     }
 
 

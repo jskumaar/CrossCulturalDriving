@@ -38,16 +38,23 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     private bool resetToNormalConfig = false;
     private bool configChanged = false;
 
+    private ScenarioManagerStartle scenarioManager;
+
+
     void Start()
     {
         rb = vehicleController.GetComponent<Rigidbody>();
         currentConfig = normalConfig;
+        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
     }
 
     private void Update() {
         if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
             IsDriving = !IsDriving;
+            scenarioManager.isScenarioActive = IsDriving;
         }
+
+        
 
         // // Detect steering wheel button presses
         // for (int i = 0; i <= 19; i++)
@@ -72,6 +79,8 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
     void FixedUpdate()
     {
+        IsDriving = scenarioManager.isScenarioActive;
+
         if (splineContainer == null || splineContainer.Splines.Count == 0 || !IsDriving) {
             return;
         }
