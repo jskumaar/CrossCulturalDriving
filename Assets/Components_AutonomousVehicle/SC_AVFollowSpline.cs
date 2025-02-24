@@ -25,6 +25,8 @@ public class SC_AVFollowSpline : MonoBehaviour
     private Vector3 _lookPoint;
     private Vector3 _toTarget;
     private float _headingError;
+    public Vector3 originalPos;
+    public Quaternion originalRot;
 
     public bool IsDriving = false;
 
@@ -32,9 +34,21 @@ public class SC_AVFollowSpline : MonoBehaviour
     private bool initializedClosestT = false;
     private float lastClosestT = 0f;
 
+    private ScenarioManagerStartle scenarioManager;
+
     void Start()
     {
         rb = vehicleController.GetComponent<Rigidbody>();
+        originalPos = transform.position;
+        originalRot = transform.rotation;
+        Debug.Log("Original Position of GameObject: " + gameObject.name + originalPos);
+
+        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+
+        // if (scenarioManager == null)
+        // {
+        //     Debug.LogError("ScenarioManagerStartle not found! Ensure it exists in the scene.");
+        // }
     }
 
     private void Update() {
@@ -45,7 +59,17 @@ public class SC_AVFollowSpline : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (splineContainer == null || splineContainer.Splines.Count == 0 || !IsDriving) {
+        // if (splineContainer == null || splineContainer.Splines.Count == 0 || !IsDriving) {
+        //     return;
+        // }
+
+        if (scenarioManager == null || !scenarioManager.isScenarioActive || splineContainer == null || splineContainer.Splines.Count == 0)
+        {
+            // Debug.Log("Scenario is not active or splineContainer is null. Exiting FixedUpdate for object " + gameObject.name);
+            // Debug.Log("ScenarioManagerStartle is null: " + (scenarioManager == null));
+            // Debug.Log("splineContainer is null: " + (splineContainer == null));
+            // Debug.Log("splineContainer.Splines.Count: " + (splineContainer.Splines.Count));
+            // Debug.Log("ScenarioManagerStartle is active: " + scenarioManager.isScenarioActive);
             return;
         }
 

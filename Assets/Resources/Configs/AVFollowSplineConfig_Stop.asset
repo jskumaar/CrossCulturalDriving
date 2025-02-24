@@ -20,4 +20,4 @@ MonoBehaviour:
   Kp_speed: 2
   Ki_speed: 0.01
   Kd_speed: 0.01
-  decelerationRate: 6
+  decelerationRate: 8

@@ -5,18 +5,21 @@ public class MarkerActivator : MonoBehaviour
 {
     private ScenarioManagerStartle scenarioManager;
     private int markersPassed = 0;
-    private int totalMarkers = 4; // Adjust based on the actual number of ProgressMarkers
+    private int totalMarkers = 5; // Adjust based on the actual number of ProgressMarkers
     private int currentLap = 1;
     private HashSet<int> passedMarkers = new HashSet<int>();
     private bool interactionMarkersActivated = false;
     private Dictionary<string, GameObject> markerDictionary = new Dictionary<string, GameObject>();
-    private Dictionary<string, GameObject> trafficCarDictionary = new Dictionary<string, GameObject>();
+    private Dictionary<string, GameObject> scenarioTrafficCarDictionary = new Dictionary<string, GameObject>();
+    private Dictionary<string, GameObject> regularTrafficCarDictionary = new Dictionary<string, GameObject>();
 
     void Start()
     {
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
         Debug.Log($"[MarkerActivator] ScenarioManager: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
         CacheMarkers();
+        CacheScenarioTrafficCars();
+        CacheRegularTrafficCars();
     }
 
     // public void updateScenario(string stimulus, string scenario)
@@ -46,19 +49,36 @@ public class MarkerActivator : MonoBehaviour
         Debug.Log($"[MarkerActivator] Cached {markerDictionary.Count} markers.");
     }
 
-    private void TrafficCars()
+    private void CacheScenarioTrafficCars()
     {
         // Implement logic to manage traffic cars
-        GameObject[] trafficCars = GameObject.FindGameObjectsWithTag("TrafficCar");
+        GameObject[] scenarioTrafficCars = GameObject.FindGameObjectsWithTag("TrafficCar");
 
         // cache the traffic cars
-        foreach (GameObject car in trafficCars)
+        foreach (GameObject car in scenarioTrafficCars)
         {
-            trafficCarDictionary[car.name.ToLower()] = car;
+            scenarioTrafficCarDictionary[car.name.ToLower()] = car;
             car.SetActive(false);
         }
-        Debug.Log($"[MarkerActivator] Cached {trafficCarDictionary.Count} traffic cars.");
+        Debug.Log($"[MarkerActivator] Cached {scenarioTrafficCarDictionary.Count} scenario traffic cars.");
     }
+
+    private void CacheRegularTrafficCars()
+    {
+        // Implement logic to manage traffic cars
+        GameObject[] regularTrafficCars = GameObject.FindGameObjectsWithTag("RegularTrafficCar");
+
+        // cache the traffic cars
+        foreach (GameObject car in regularTrafficCars)
+        {
+            regularTrafficCarDictionary[car.name.ToLower()] = car;
+            Debug.Log($"[MarkerActivator] Cached regular traffic car: {car.name}");
+        }
+        Debug.Log($"[MarkerActivator] Cached {regularTrafficCarDictionary.Count} other traffic cars.");
+    }
+
+
+
 
     void OnTriggerEnter(Collider other)
     {
@@ -72,20 +92,28 @@ public class MarkerActivator : MonoBehaviour
                 markersPassed++;
                 Debug.Log($"Passed ProgressMarker: {markerNumber}");
 
-                // Check lap completion
-                float progress = ((float)markersPassed-1) / totalMarkers;
-                Debug.Log($"Lap progress: {progress * 100}%");
 
-                if ((progress < 0.2f || progress >= 0.9f) && !interactionMarkersActivated)
+                // For first scenario
+                if (markerNumber==0 && currentLap ==1)
                 {
                     scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
                     ActivateInteractionMarkers();
-                    // ActivateTrafficCars();
-                    interactionMarkersActivated = true;
+                    ActivateScenarioTrafficCars();
+                    ActivateStreetCart();
+
+                }
+
+                // For subsequent scenarios
+                if (markerNumber >= totalMarkers - 1)
+                {
+                    scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
+                    ActivateInteractionMarkers();
+                    ActivateScenarioTrafficCars();
+                    ActivateStreetCart();
                 }
 
                 // Check if the lap is complete
-                if (markersPassed == totalMarkers + 1)
+                if (markerNumber == totalMarkers)
                 {
                     CompleteLap();
                 }
@@ -115,9 +143,9 @@ public class MarkerActivator : MonoBehaviour
     }
 
 
-    private void ActivateTrafficCars()
+    private void ActivateScenarioTrafficCars()
     {
-        foreach (var kvp in trafficCarDictionary)
+        foreach (var kvp in scenarioTrafficCarDictionary)
         {
             string carName = kvp.Key;
             GameObject car = kvp.Value;
@@ -126,7 +154,7 @@ public class MarkerActivator : MonoBehaviour
                 carName.Contains(scenarioManager.currentScenario))
             {
                 car.SetActive(true);
-                Debug.Log($"Activated traffic car: {car.name}");
+                // Debug.Log($"Activated traffic car: {car.name}");
             }
             else
             {
@@ -135,26 +163,60 @@ public class MarkerActivator : MonoBehaviour
         }
     }
 
+
+    private void ActivateStreetCart()
+    {
+        // Implement logic to manage traffic cars
+        GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
+
+        foreach (GameObject cart in streetCarts)
+        {
+            if (cart.name.Contains(scenarioManager.currentStimulus) &&
+                cart.name.Contains(scenarioManager.currentScenario))
+            {
+                cart.SetActive(true);
+                Debug.Log($"Activated street cart: {car.name}");
+            }
+            else
+            {
+                cart.SetActive(false);
+            }
+        }
+    }
+
+    private void ResetRegularTrafficCars()
+    {
+        foreach (var kvp in regularTrafficCarDictionary)
+        {
+            string carName = kvp.Key;
+            GameObject car = kvp.Value;
+            
+            car.transform.position = car.GetComponent<SC_AVFollowSpline>().originalPos;
+            car.transform.rotation = car.GetComponent<SC_AVFollowSpline>().originalRot;
+        }
+        Debug.Log($"[MarkerActivator] Reset regular traffic cars to original positions.");
+    }
+
+
     private void CompleteLap()
     {
-        Debug.Log("Lap completed. Resetting markers.");
+        
         currentLap++;
         markersPassed = 0;
         passedMarkers.Clear();
         interactionMarkersActivated = false;
 
-        // foreach (var marker in markerDictionary.Values)
-        // {
-        //     marker.SetActive(false);
-        // }
+        // Reset regular traffic cars
+        ResetRegularTrafficCars();
     }
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("InteractionMarkers"))
+        if (other.CompareTag("InteractionMarkers") || other.CompareTag("EcoMarker") || other.CompareTag("StopMarker") || other.CompareTag("NormalMarker") || other.CompareTag("SportyMarker"))
         {
+            // Deactivate the marker
             other.gameObject.SetActive(false);
-            Debug.Log($"Marker Passed. Deactivated marker: {other.name}");
+            Debug.Log($"Deactivated marker: {other.name}");
         }
     }
 }

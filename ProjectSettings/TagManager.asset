@@ -25,6 +25,8 @@ TagManager:
   - NormalMarker
   - StopMarker
   - TrafficCar
+  - RegularTrafficCar
+  - StreetCart
   layers:
   - Default
   - TransparentFX

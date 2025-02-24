@@ -29,8 +29,18 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
     // Newly added (02/05/25)
     private List<BoxCollider> spawnAreas = new List<BoxCollider>(); // FIX: Initialize list
     public int maxAgentCountPerArea = 10;
-    private Dictionary<BoxCollider, int> activeAgentCount = new Dictionary<BoxCollider, int>();
-    private Dictionary<GameObject, BoxCollider> agentSpawnAreaMap = new Dictionary<GameObject, BoxCollider>(); // Track spawn area for each agent
+    public Dictionary<BoxCollider, int> activeAgentCount = new Dictionary<BoxCollider, int>();
+    public Dictionary<GameObject, BoxCollider> agentSpawnAreaMap = new Dictionary<GameObject, BoxCollider>(); // Track spawn area for each agent
+    private Dictionary<GameObject, Vector3> lastPositions = new Dictionary<GameObject, Vector3>();
+    private Dictionary<GameObject, int> stuckCounts = new Dictionary<GameObject, int>();
+    private int stuckThreshold = 3;
+    private float stuckTimeThreshold = 5f;
+    private Dictionary<GameObject, float> stuckTimers = new Dictionary<GameObject, float>();
+
+    private Dictionary<GameObject, Vector3> initialPositions = new Dictionary<GameObject, Vector3>();
+    private Dictionary<GameObject, float> lastRerouteTimes = new Dictionary<GameObject, float>();
+    private float rerouteCooldown = 3f; // 3-second cooldown
+
 
 
     void Awake()
@@ -122,66 +132,6 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
         }
     }
 
-    // void RandomSpawn()
-    // {
-    //     if (spawnAreas.Count == 0)
-    //     {
-    //         Debug.LogError("No spawn areas available.");
-    //         return;
-    //     }
-
-    //     // Attempt to find a valid spawn area that has not reached its limit
-    //     List<BoxCollider> availableSpawnAreas = new List<BoxCollider>();
-    //     foreach (var area in spawnAreas)
-    //     {
-    //         if (activeAgentCount[area] < maxAgentCountPerArea)
-    //         {
-    //             availableSpawnAreas.Add(area);
-    //         }
-    //     }
-
-    //     // If no areas are available, stop spawning
-    //     if (availableSpawnAreas.Count == 0)
-    //     {
-    //         Debug.Log("All spawn areas have reached their pedestrian limits.");
-    //         return;
-    //     }
-
-    //     // Randomly select from available spawn areas
-    //     BoxCollider selectedSpawnArea = availableSpawnAreas[Random.Range(0, availableSpawnAreas.Count)];
-
-    //     // Find a valid spawn point within the selected area
-    //     Vector3 spawnPosition = SelectRandomBirthplace(selectedSpawnArea);
-    //     if (spawnPosition == Vector3.one * -1)
-    //     {
-    //         Debug.LogWarning("No valid spawn position found.");
-    //         return;
-    //     }
-
-    //     // Instantiate and register the agent
-    //     GameObject randomPrefab = agentPrefabs[Random.Range(0, agentPrefabs.Length)];
-    //     GameObject agentInstance = Instantiate(randomPrefab, spawnPosition, Quaternion.identity);
-
-    //     agentInstance.GetComponent<NetworkObject>().Spawn();
-    //     agentInstance.transform.parent = agentSpawn;
-    //     agentInstances.Add(agentInstance);
-
-    //     // // Assign a callback to remove the agent when destroyed
-    //     // CrowdAgent agentComponent = agentInstance.GetComponent<CrowdAgent>();
-    //     // if (agentComponent)
-    //     // {
-    //     //     agentComponent.onDestroyed += () => RemoveAgent(selectedSpawnArea, agentInstance);
-    //     // }
-
-    //     // Increase the pedestrian count for this area
-    //     activeAgentCount[selectedSpawnArea]++;
-
-    //     if (agentInstances.Count >= maxAgentCount)
-    //     {
-    //         CancelInvoke(nameof(RandomSpawn));
-    //         Debug.Log("Max agent count reached. Stopping spawn.");
-    //     }
-    // }
 
     void RandomSpawn()
     {
@@ -223,85 +173,12 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
         agentInstance.AddComponent<AgentBoundsHandler>().Initialize(selectedSpawnArea);
         activeAgentCount[selectedSpawnArea]++;
+
+        initialPositions[agentInstance] = spawnPosition.Value;
+
     }
 
 
-    // Vector3 SelectRandomBirthplace(BoxCollider spawnArea)
-    // {
-    //     Vector3 randomDest;
-    //     NavMeshHit hit;
-    //     bool foundValidSpawn = false;
-    //     int attempts = 0;
-
-    //     while (!foundValidSpawn && attempts < 10) // Try up to 10 times
-    //     {
-    //         randomDest = new Vector3(
-    //             Random.Range(spawnArea.bounds.min.x, spawnArea.bounds.max.x),
-    //             spawnArea.transform.position.y,
-    //             Random.Range(spawnArea.bounds.min.z, spawnArea.bounds.max.z)
-    //         );
-
-    //         if (NavMesh.SamplePosition(randomDest, out hit, 5f, NavMesh.AllAreas))
-    //         {
-    //             foundValidSpawn = true;
-    //         }
-    //         attempts++;
-    //     }
-
-    //     return foundValidSpawn ? hit.position : Vector3.one * -1;
-    // }
-
-    // Vector3 SelectRandomBirthplace(BoxCollider spawnArea)
-    // {
-    //     Vector3 randomDest = Vector3.zero;
-    //     int attempts = 0;
-
-    //     while (attempts < 10) // Try up to 10 times
-    //     {
-    //         randomDest = new Vector3(
-    //             Random.Range(spawnArea.bounds.min.x, spawnArea.bounds.max.x),
-    //             spawnArea.transform.position.y,
-    //             Random.Range(spawnArea.bounds.min.z, spawnArea.bounds.max.z)
-    //         );
-
-    //         if (NavMesh.SamplePosition(randomDest, out NavMeshHit hit, 5f, NavMesh.AllAreas))
-    //         {
-    //             return hit.position; // Return immediately when a valid position is found
-    //         }
-    //         attempts++;
-    // }
-
-    // // Return an invalid position if no valid spawn point is found
-    // return Vector3.one * -1;
-    // }
-
-    // Vector3 SelectRandomBirthplace(BoxCollider spawnArea)
-    // {
-    //     Vector3 randomDest;
-    //     NavMeshHit hit;
-    //     int attempts = 0;
-
-    //     while (attempts < 50) // Increased attempts
-    //     {
-    //         randomDest = new Vector3(
-    //             Random.Range(spawnArea.bounds.min.x, spawnArea.bounds.max.x),
-    //             spawnArea.transform.position.y,
-    //             Random.Range(spawnArea.bounds.min.z, spawnArea.bounds.max.z)
-    //         );
-
-    //         if (NavMesh.SamplePosition(randomDest, out hit, 5f, NavMesh.AllAreas))
-    //         {
-    //             if (spawnArea.bounds.Contains(hit.position)) // Confirm within bounding box
-    //             {
-    //                 return hit.position;
-    //             }
-    //         }
-    //         attempts++;
-    //     }
-
-    //     Debug.LogError("No valid spawn point found after multiple attempts.");
-    //     return Vector3.one * -1;
-    // }
 
     Vector3? SelectRandomBirthplace(BoxCollider spawnArea) // Nullable Vector3
     {
@@ -335,6 +212,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
     {
         if (agentInstances.Contains(agent))
         {
+            Debug.Log($"Removing agent {agent.name} from area {area.name}");
             agentInstances.Remove(agent);
             Destroy(agent);
 
@@ -345,47 +223,227 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
         }
     }
 
+    // private void CheckAndRerouteAgents()
+    // {
+    //     for (int i = agentInstances.Count - 1; i >= 0; i--)
+    //     {
+    //         GameObject agent = agentInstances[i];
+    //         if (agent == null) continue;
+
+    //         if (agentSpawnAreaMap.TryGetValue(agent, out BoxCollider spawnArea))
+    //         {
+    //             var agentHandler = agent.GetComponent<AgentBoundsHandler>();
+    //             if (agentHandler && agentHandler.IsOutOfBounds(agent.transform.position, spawnArea))
+    //             {
+    //                 Debug.Log($"Agent {agent.name} is out of bounds. Stopping and rerouting...");
+    //                 // reroute to a valid position inside bounds
+    //                 agentHandler.RerouteToValidPosition(spawnArea);
+    //             }
+    //         }
+    //     }
+    // }
+
     private void CheckAndRerouteAgents()
     {
         foreach (var agent in agentInstances)
         {
+            if (agent == null) continue;
+
             if (agentSpawnAreaMap.TryGetValue(agent, out BoxCollider spawnArea))
             {
                 var agentHandler = agent.GetComponent<AgentBoundsHandler>();
                 if (agentHandler && agentHandler.IsOutOfBounds(agent.transform.position, spawnArea))
                 {
-                    Debug.Log($"Agent {agent.name} is out of bounds. Rerouting...");
-                    agentHandler.RerouteToValidPosition(spawnArea);
+                    RerouteAgent(agent, spawnArea);
+                }
+                else
+                {
+                    CheckForStuckAgent(agent, spawnArea);
                 }
             }
         }
     }
+
+    private void CheckForStuckAgent(GameObject agent, BoxCollider spawnArea)
+    {
+        if (!lastPositions.ContainsKey(agent))
+        {
+            lastPositions[agent] = agent.transform.position;
+            stuckCounts[agent] = 0;
+            stuckTimers[agent] = Time.time;
+            return;
+        }
+
+        if (Vector3.Distance(lastPositions[agent], agent.transform.position) < 0.01f)
+        {
+            stuckCounts[agent]++;
+            if (!stuckTimers.ContainsKey(agent)) stuckTimers[agent] = Time.time;
+        }
+        else
+        {
+            stuckCounts[agent] = 0;
+            stuckTimers[agent] = Time.time;
+        }
+
+        lastPositions[agent] = agent.transform.position;
+
+        if (stuckCounts[agent] >= stuckThreshold)
+        {   
+            AgentBoundsHandler agentHandler = agent.GetComponent<AgentBoundsHandler>();
+            if (agentHandler != null && Time.time - stuckTimers[agent] >= stuckTimeThreshold && !agentHandler.IsPlayerNearby())            {
+                ResetAgentPosition(agent, spawnArea);
+                stuckCounts[agent] = 0;
+                stuckTimers[agent] = Time.time;
+            }
+            else
+            {
+                RerouteAgent(agent, spawnArea);
+            }
+        }
+    }
+
+
+    private void ResetAgentPosition(GameObject agent, BoxCollider spawnArea)
+    {
+        
+        // Before actually rerouting, check if we've done so recently
+        if (lastRerouteTimes.TryGetValue(agent, out float lastTime))
+        {
+            if (Time.time - lastTime < rerouteCooldown)
+            {
+                // If we're still in cooldown, skip
+                return;
+            }
+        }
+            
+        
+        Debug.Log($"Agent {agent.name} is being reset to initial spawn area...");
+
+        if (initialPositions.TryGetValue(agent, out Vector3 initialPosition))
+        {
+            Debug.Log($"Resetting agent {agent.name} to initial spawn position...");
+            agent.GetComponent<NavMeshAgent>().Warp(initialPosition);
+            agent.GetComponent<AgentBoundsHandler>().SetNewRandomDestination(spawnArea);
+
+            // Record the time of this reroute
+            lastRerouteTimes[agent] = Time.time;
+        }
+    }
+
+
+    private void RerouteAgent(GameObject agent, BoxCollider spawnArea)
+    {
+        
+        // Before actually rerouting, check if we've done so recently
+        if (lastRerouteTimes.TryGetValue(agent, out float lastTime))
+        {
+            if (Time.time - lastTime < rerouteCooldown)
+            {
+                // If we're still in cooldown, skip
+                return;
+            }
+        }
+        
+        Debug.Log($"Agent {agent.name} is being rerouted...");
+
+        NavMeshAgent navAgent = agent.GetComponent<NavMeshAgent>();
+        if (navAgent == null) return;
+
+        Vector3 oppositeDirection = agent.transform.position - spawnArea.bounds.center;
+        Vector3 tempPosition = agent.transform.position + oppositeDirection.normalized * 5f;
+        if (NavMesh.SamplePosition(tempPosition, out NavMeshHit tempHit, 1f, NavMesh.AllAreas))
+        {
+            navAgent.ResetPath();
+            navAgent.SetDestination(tempHit.position);
+        }
+
+        // Record the time of this reroute
+        lastRerouteTimes[agent] = Time.time;
+
+        agent.GetComponent<AgentBoundsHandler>().Invoke(nameof(AgentBoundsHandler.RerouteToValidPosition), 2f);
+    }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 public class AgentBoundsHandler : MonoBehaviour
 {
     private NavMeshAgent agent;
+    private BoxCollider currentBounds;
 
     public void Initialize(BoxCollider bounds)
     {
         agent = GetComponent<NavMeshAgent>();
+        currentBounds = bounds;
+        if (agent == null)
+        {
+            Debug.LogError("NavMeshAgent is missing on agent: " + gameObject.name);
+            return;
+        }
         SetNewRandomDestination(bounds);
     }
 
     public bool IsOutOfBounds(Vector3 position, BoxCollider bounds)
     {
-        return position.x < bounds.bounds.min.x ||
-               position.x > bounds.bounds.max.x ||
-               position.z < bounds.bounds.min.z ||
-               position.z > bounds.bounds.max.z;
+        return !bounds.bounds.Contains(position);
+    }
+
+    // Parameterless method:
+    public void RerouteToValidPosition()
+    {
+        RerouteToValidPosition(currentBounds);
     }
 
     public void RerouteToValidPosition(BoxCollider bounds)
     {
+        if (agent == null) return;
+
+        // Stop the agent before rerouting
+        // agent.isStopped = true;
+        agent.ResetPath(); // Clear existing path
+
+        // // Move agent in the opposite direction
+        // Vector3 oppositeDirection = transform.position - bounds.bounds.center;
+        // Vector3 tempPosition = transform.position + oppositeDirection.normalized * 2f; // Move 2 units away
+        // if (NavMesh.SamplePosition(tempPosition, out NavMeshHit hit, 1f, NavMesh.AllAreas))
+        // {
+        //     transform.position = hit.position; // Temporarily reposition to escape tight space
+        // }
+
+        // Try to reroute to a valid position inside bounds
         Vector3 newDestination = GetRandomPointInsideBounds(bounds);
-        agent.SetDestination(newDestination);
+        if (newDestination != Vector3.zero) 
+        {
+            agent.SetDestination(newDestination);
+            agent.isStopped = false;
+        }
+        else
+        {
+            // If no valid reroute found, check for nearby player before deleting
+            if (!IsPlayerNearby())
+            {
+                // Find the manager and remove the agent properly
+                CrowdAgentManagerMulti manager = CrowdAgentManagerMulti.Singleton;
+                if (manager != null)
+                {
+                    if (manager.agentSpawnAreaMap.TryGetValue(gameObject, out BoxCollider spawnArea))  // ✅ Fixed: Declare `spawnArea` before using it
+                    {
+                        manager.RemoveAgent(spawnArea, gameObject);
+                    }
+                    else
+                    {
+                        Debug.LogError($"Failed to remove agent {gameObject.name} - Spawn area missing.");
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"Failed to remove agent {gameObject.name} - Manager is null.");
+                }
+            }
+        }
     }
+
 
     private Vector3 GetRandomPointInsideBounds(BoxCollider bounds)
     {
@@ -393,17 +451,24 @@ public class AgentBoundsHandler : MonoBehaviour
         NavMeshHit hit;
         int attempts = 0;
 
-        do
+        while (attempts < 10) // Try up to 10 times
         {
             randomPos = new Vector3(
                 Random.Range(bounds.bounds.min.x, bounds.bounds.max.x),
-                transform.position.y,
+                bounds.transform.position.y,
                 Random.Range(bounds.bounds.min.z, bounds.bounds.max.z)
             );
-            attempts++;
-        } while (!NavMesh.SamplePosition(randomPos, out hit, 5f, NavMesh.AllAreas) && attempts < 10);
 
-        return hit.position;
+            if (NavMesh.SamplePosition(randomPos, out hit, 5f, NavMesh.AllAreas) && bounds.bounds.Contains(hit.position))
+            {
+                return hit.position;
+            }
+
+            attempts++;
+        }
+
+        Debug.LogError("No valid spawn point found after multiple attempts.");
+        return Vector3.zero; // Return zero to indicate failure
     }
 
     public void SetNewRandomDestination(BoxCollider bounds)
@@ -411,7 +476,23 @@ public class AgentBoundsHandler : MonoBehaviour
         if (bounds != null && agent != null)
         {
             Vector3 destination = GetRandomPointInsideBounds(bounds);
-            agent.SetDestination(destination);
+            if (destination != Vector3.zero)
+            {
+                agent.SetDestination(destination);
+            }
         }
     }
+
+    public bool IsPlayerNearby()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null && agent != null)
+        {
+            float distance = Vector3.Distance(agent.transform.position, player.transform.position);
+            return distance < 10f;
+        }
+        return false;
+    }
+
+
 }

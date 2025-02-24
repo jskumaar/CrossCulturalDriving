@@ -13,13 +13,6 @@ public class ScenarioManagerStartle : MonoBehaviour
     {
         currentStimulus = "random";
         currentScenario = "random";
-
-        // Set all TrafficCars to inactive
-        GameObject[] trafficCars = GameObject.FindGameObjectsWithTag("TrafficCar");
-        foreach (GameObject car in trafficCars)
-        {
-            car.SetActive(false);
-        }
     }
 
     // Update is called once per frame

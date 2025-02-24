@@ -5,6 +5,10 @@ using Unity.Mathematics;
 
 public class SC_AVFollowSplineEgo : MonoBehaviour
 {
+    // public SplineContainer defaultSplineContainer;
+    // public SplineContainer surpriseAlertSplineContainer;
+    // private SplineContainer splineContainer;
+
     public SplineContainer splineContainer;
     public NetworkVehicleController vehicleController; 
     public SO_AVFollowSplineConfig normalConfig;
@@ -13,6 +17,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     public SO_AVFollowSplineConfig stopConfig;
 
     private SO_AVFollowSplineConfig currentConfig;
+    
 
     private float steeringIntegral = 0f;
     private float steeringPrevError = 0f;
@@ -44,7 +49,8 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     void Start()
     {
         rb = vehicleController.GetComponent<Rigidbody>();
-        currentConfig = normalConfig;
+        currentConfig = ecoConfig;
+        // splineContainer = defaultSplineContainer;
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
     }
 
@@ -76,6 +82,8 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         //     Debug.Log($"Start button pressed. startButtonPress: {startButtonPress}, resetToNormalConfig: {resetToNormalConfig}, vehicleStopped: {vehicleStopped}");
         // }
     }
+
+
 
     void FixedUpdate()
     {
@@ -133,6 +141,23 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     }
 
 
+    // private void UpdateSplineBasedOnScenario()
+    // {
+    //     // If no scenarioManager found, skip
+    //     if (scenarioManager == null) return;
+
+    //     // Convert scenario name to lowercase to avoid case-sensitivity issues 
+    //     string scenarioName = scenarioManager.currentScenario.ToLower();
+
+    //     // If scenario name includes "surprise" or "alert", switch to that SplineContainer
+    //     if (scenarioName.Contains("surprise") && scenarioName.Contains("alert"))
+    //     {
+    //         splineContainer = surpriseAlertSplineContainer;
+    //     }
+
+    // }
+
+
     private void UpdateConfigBasedOnMarker()
     {
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 5f);
@@ -169,18 +194,24 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 vehicleStopped = true;
                 Debug.Log("Stop marker detected. Changing to stopConfig.");
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+
+                if (hitCollider.name.Contains("Frustration Driving 3")){
+                    Invoke("ResetToNormalConfig", 20f); // Change back to normal config after 20 seconds
+                    Debug.Log("Frustration Driving 3 marker detected. Changing to stopConfig.");
+                }
+
                 break;
             }
-            else if (hitCollider.CompareTag("InteractionMarkers") && hitCollider.name.Contains("Frustration Alert 3") && !vehicleStopped)
-            {
-                currentConfig = stopConfig;
-                configChanged = true;
-                vehicleStopped = true;
-                Debug.Log("Frustration Alert 3 marker detected. Changing to stopConfig.");
-                Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
-                Invoke("ResetToNormalConfig", 20f); // Change back to normal config after 20 seconds
-                break;
-            }
+            // else if (hitCollider.CompareTag("InteractionMarkers") && hitCollider.name.Contains("Frustration Alert 3") && !vehicleStopped)
+            // {
+            //     currentConfig = stopConfig;
+            //     configChanged = true;
+            //     vehicleStopped = true;
+            //     Debug.Log("Frustration Alert 3 marker detected. Changing to stopConfig.");
+            //     Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+            //     Invoke("ResetToNormalConfig", 20f); // Change back to normal config after 20 seconds
+            //     break;
+            // }
         }
 
         // // If stopped. Reset to normal config after 20 seconds.

@@ -16,12 +16,13 @@ public class NavigationScreenSS : ReplayBehaviour
         stop,
         car,
         pedestrian,
+        gradient,
         blankScreen  // Ensure this is the default until a trigger is hit
     }
 
     [ReplayVar(false)] public int recordingIconType = (int)IconType.blankScreen;
 
-    public Sprite vagueIconImage, pedestrianImage, warningIconImage, stopIconImage, carImage, straightImage, leftImage, rightImage, blankScreen;
+    public Sprite vagueIconImage, pedestrianImage, warningIconImage, stopIconImage, carImage, straightImage, leftImage, rightImage, gradientImage, blankScreen;
     public Image gpsImagePlane;
     public IconType defaultIconType;
     private AudioSource GpsAudioPlayer;
@@ -38,10 +39,10 @@ public class NavigationScreenSS : ReplayBehaviour
         { "surprise_alert_trigger_1", IconType.Right },
         { "surprise_alert_trigger_2", IconType.car },
         { "surprise_alert_trigger_3", IconType.warning },
-        { "surprise_alert_trigger_4", IconType.Right },
+        { "surprise_alert_trigger_4", IconType.Left },
         { "frustration_alert_trigger_1", IconType.Left },
         { "frustration_alert_trigger_2", IconType.Right },
-        { "frustration_alert_trigger_3", IconType.stop },
+        { "frustration_alert_trigger_3", IconType.gradient },
         { "frustration_alert_trigger_4", IconType.pedestrian },
         { "confusion_alert_trigger_1_action_end", IconType.blankScreen },
         { "confusion_alert_trigger_2_action_end", IconType.blankScreen },
@@ -118,6 +119,8 @@ public class NavigationScreenSS : ReplayBehaviour
                 return carImage;
             case IconType.stop:
                 return stopIconImage;
+            case IconType.gradient:
+                return gradientImage;
             case IconType.blankScreen:
                 return blankScreen;
             default:
