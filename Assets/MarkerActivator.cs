@@ -175,7 +175,7 @@ public class MarkerActivator : MonoBehaviour
                 cart.name.Contains(scenarioManager.currentScenario))
             {
                 cart.SetActive(true);
-                Debug.Log($"Activated street cart: {car.name}");
+                Debug.Log($"Activated street cart: {cart.name}");
             }
             else
             {

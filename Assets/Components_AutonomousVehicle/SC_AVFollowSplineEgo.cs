@@ -16,7 +16,13 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     public SO_AVFollowSplineConfig ecoConfig;
     public SO_AVFollowSplineConfig stopConfig;
 
+    public string driveMode;
+
     private SO_AVFollowSplineConfig currentConfig;
+
+    public float steeringControl;
+    public float throttleControl;
+    public float currentSpeed;
     
 
     private float steeringIntegral = 0f;
@@ -50,6 +56,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     {
         rb = vehicleController.GetComponent<Rigidbody>();
         currentConfig = ecoConfig;
+        driveMode = "eco";
         // splineContainer = defaultSplineContainer;
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
     }
@@ -110,7 +117,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         Vector3 vehicleForward = transform.forward;
         _headingError = Vector3.SignedAngle(vehicleForward, _toTarget, Vector3.up) * Mathf.Deg2Rad;
         
-        float currentSpeed = rb.velocity.magnitude;
+        currentSpeed = rb.velocity.magnitude;
         float targetSpeed = currentConfig.desiredSpeed;
 
         if (configChanged){
@@ -125,11 +132,11 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
         float speedError = targetSpeed - currentSpeed;
 
-        float steeringControl = PIDControl(_headingError, ref steeringIntegral, ref steeringPrevError, 
+        steeringControl = PIDControl(_headingError, ref steeringIntegral, ref steeringPrevError, 
                                            currentConfig.Kp_steering, currentConfig.Ki_steering, currentConfig.Kd_steering);
         steeringControl = Mathf.Clamp(steeringControl, -1f, 1f);
 
-        float throttleControl = PIDControl(speedError, ref speedIntegral, ref speedPrevError, 
+        throttleControl = PIDControl(speedError, ref speedIntegral, ref speedPrevError, 
                                            currentConfig.Kp_speed, currentConfig.Ki_speed, currentConfig.Kd_speed);
         throttleControl = Mathf.Clamp(throttleControl, -1f, 1f);
 
@@ -167,6 +174,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
             {
                 currentConfig = normalConfig;
                 configChanged = true;
+                driveMode = "normal";
                 Debug.Log("Normal marker detected. Changing to normalConfig.");
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
                 break;
@@ -175,6 +183,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
             {
                 currentConfig = sportyConfig;
                 configChanged = true;
+                driveMode = "sporty";
                 Debug.Log("Sporty marker detected. Changing to sportyConfig.");
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
                 break;
@@ -183,6 +192,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
             {
                 currentConfig = ecoConfig;
                 configChanged = true;
+                driveMode = "eco";
                 Debug.Log("Eco marker detected. Changing to ecoConfig.");
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
                 break;
@@ -192,6 +202,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 currentConfig = stopConfig;
                 configChanged = true;
                 vehicleStopped = true;
+                driveMode = "stop";
                 Debug.Log("Stop marker detected. Changing to stopConfig.");
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
 

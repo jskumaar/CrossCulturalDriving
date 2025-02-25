@@ -41,6 +41,9 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
     private Dictionary<GameObject, float> lastRerouteTimes = new Dictionary<GameObject, float>();
     private float rerouteCooldown = 3f; // 3-second cooldown
 
+    private ScenarioManagerStartle scenarioManager;
+
+
 
 
     void Awake()
@@ -55,6 +58,9 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
     void Start()
     {
+        
+        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+
         // Set up block areas
         blockAreas = BlocksManager.GetBuildingBlocks();
         if (blockAreas.Count <= 0)
@@ -103,7 +109,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetKeyDown(KeyCode.P) || scenarioManager.isScenarioActive)
         {
             AgentSetup(null);
         }
