@@ -358,6 +358,7 @@ public class CommunicationManager : MonoBehaviour
         // Listen for 'Start Unity Simulation' message from the server
         if (message.ToLower().Contains("start") && message.ToLower().Contains("unity"))
         {
+            Debug.Log("Received start command from server. Activating scenario.");
             scenarioManager.isScenarioActive = true;
         }
 

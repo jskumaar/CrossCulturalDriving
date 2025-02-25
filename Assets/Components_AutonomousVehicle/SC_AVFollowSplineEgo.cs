@@ -124,10 +124,14 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
             Debug.Log($"Current speed: {currentSpeed}, Target speed: {targetSpeed}, Desired speed: , {currentConfig.desiredSpeed}");
         }
 
-        // Gradually reduce speed when targetSpeed is zero
-        if (targetSpeed == 0 && currentSpeed > 1f)
+        // Gradually adjust speed based on acceleration or deceleration rate
+        if (targetSpeed > currentSpeed + 2)
         {
-            targetSpeed = Mathf.Max(0, currentSpeed - Time.deltaTime * currentConfig.decelerationRate);
+            currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, -currentConfig.decelerationRate * Time.deltaTime);
+        }
+        else if (targetSpeed < currentSpeed - 2)
+        {
+            currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, currentConfig.decelerationRate * Time.deltaTime);
         }
 
         float speedError = targetSpeed - currentSpeed;
@@ -207,7 +211,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
 
                 if (hitCollider.name.Contains("Frustration Driving 3")){
-                    Invoke("ResetToNormalConfig", 20f); // Change back to normal config after 20 seconds
+                    Invoke("ResetToNormalConfig", 40f); // Change back to normal config after 20 seconds
                     Debug.Log("Frustration Driving 3 marker detected. Changing to stopConfig.");
                 }
 

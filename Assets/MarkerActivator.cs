@@ -129,8 +129,8 @@ public class MarkerActivator : MonoBehaviour
             string markerName = kvp.Key;
             GameObject marker = kvp.Value;
 
-            if (markerName.Contains(scenarioManager.currentStimulus) &&
-                markerName.Contains(scenarioManager.currentScenario))
+            if (markerName.ToLower().Contains(scenarioManager.currentStimulus) &&
+                markerName.ToLower().Contains(scenarioManager.currentScenario))
             {
                 marker.SetActive(true);
                 Debug.Log($"Activated marker: {marker.name}");
@@ -150,8 +150,8 @@ public class MarkerActivator : MonoBehaviour
             string carName = kvp.Key;
             GameObject car = kvp.Value;
 
-            if (carName.Contains(scenarioManager.currentStimulus) &&
-                carName.Contains(scenarioManager.currentScenario))
+            if (carName.ToLower().Contains(scenarioManager.currentStimulus) &&
+                carName.ToLower().Contains(scenarioManager.currentScenario))
             {
                 car.SetActive(true);
                 // Debug.Log($"Activated traffic car: {car.name}");
@@ -169,10 +169,14 @@ public class MarkerActivator : MonoBehaviour
         // Implement logic to manage traffic cars
         GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
 
+        Debug.Log($"[MarkerActivator] Found {streetCarts.Length} street carts.");
+
         foreach (GameObject cart in streetCarts)
         {
-            if (cart.name.Contains(scenarioManager.currentStimulus) &&
-                cart.name.Contains(scenarioManager.currentScenario))
+            Debug.Log($"[MarkerActivator] Checking street cart: {cart.name}, Current Stimulus: {scenarioManager.currentStimulus}, Current Scenario: {scenarioManager.currentScenario}");
+            Debug.Log($"[MarkerActivator] {cart.name.ToLower().Contains(scenarioManager.currentStimulus)}: {cart.name.ToLower().Contains(scenarioManager.currentScenario)}");
+            if (cart.name.ToLower().Contains(scenarioManager.currentStimulus) &&
+                cart.name.ToLower().Contains(scenarioManager.currentScenario))
             {
                 cart.SetActive(true);
                 Debug.Log($"Activated street cart: {cart.name}");

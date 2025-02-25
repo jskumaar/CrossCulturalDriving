@@ -15,7 +15,7 @@ public class EngineSoundController : MonoBehaviour
     public float maxPitch = 2.5f;
     public float minVolume = 0.3f;
     public float maxVolume = 1.0f;
-    private float maxSpeed = 15f; // Maximum speed of the vehicle for normalization
+    private float maxSpeed = 20f; // Maximum speed of the vehicle for normalization
 
     public float targetPitch;
     public float targetVolume;
@@ -92,7 +92,7 @@ public class EngineSoundController : MonoBehaviour
             targetPitch *= sportyPitchMultiplier;
             targetVolume *= sportyVolumeMultiplier;
         }
-        
+
         // Detect acceleration
         bool currentlyAccelerating = throttle > previousThrottle + 0.2f;
 
