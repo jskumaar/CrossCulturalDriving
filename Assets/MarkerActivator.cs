@@ -6,12 +6,16 @@ public class MarkerActivator : MonoBehaviour
     private ScenarioManagerStartle scenarioManager;
     private int markersPassed = 0;
     private int totalMarkers = 5; // Adjust based on the actual number of ProgressMarkers
-    private int currentLap = 1;
+    private int currentLap = 4;
     private HashSet<int> passedMarkers = new HashSet<int>();
     private bool interactionMarkersActivated = false;
     private Dictionary<string, GameObject> markerDictionary = new Dictionary<string, GameObject>();
     private Dictionary<string, GameObject> scenarioTrafficCarDictionary = new Dictionary<string, GameObject>();
     private Dictionary<string, GameObject> regularTrafficCarDictionary = new Dictionary<string, GameObject>();
+
+    
+
+    public bool endTrial = false; // Flag to indicate if the trial should end
 
     void Start()
     {
@@ -20,6 +24,17 @@ public class MarkerActivator : MonoBehaviour
         CacheMarkers();
         CacheScenarioTrafficCars();
         CacheRegularTrafficCars();
+    }
+
+    void Update()
+    {
+        // Check if Scenario is not ready
+        if (!scenarioManager.isScenarioReady)
+        {
+            // Reset the simulation
+            ResetSimulation();
+            Debug.Log($"[MarkerActivator] Scenario is not ready. Resetting simulation.");
+        }
     }
 
     // public void updateScenario(string stimulus, string scenario)
@@ -78,8 +93,6 @@ public class MarkerActivator : MonoBehaviour
     }
 
 
-
-
     void OnTriggerEnter(Collider other)
     {
         
@@ -116,6 +129,10 @@ public class MarkerActivator : MonoBehaviour
                 if (markerNumber == totalMarkers)
                 {
                     CompleteLap();
+                    if (currentLap > 4){
+                        endTrial = true;
+                        Debug.Log("End of trial reached.");
+                    }
                 }
             }
         }
@@ -201,6 +218,33 @@ public class MarkerActivator : MonoBehaviour
         Debug.Log($"[MarkerActivator] Reset regular traffic cars to original positions.");
     }
 
+    private void ResetScenarioTrafficCars()
+    {
+        foreach (var kvp in scenarioTrafficCarDictionary)
+        {
+            string carName = kvp.Key;
+            GameObject car = kvp.Value;
+            
+            car.transform.position = car.GetComponent<SC_AVFollowSpline>().originalPos;
+            car.transform.rotation = car.GetComponent<SC_AVFollowSpline>().originalRot;
+        }
+        Debug.Log($"[MarkerActivator] Reset regular traffic cars to original positions.");
+    }
+
+
+    private void ResetPedestrians()
+    {
+        CrowdAgentManagerMulti[] crowdManagers = FindObjectsOfType<CrowdAgentManagerMulti>();
+        foreach (CrowdAgentManagerMulti manager in crowdManagers)
+        {
+            Debug.Log($"Resetting crowd agents for manager: {manager.name} with tag: {manager.GetComponent<CrowdAgentManagerMulti>().spawnAreaTag}");
+            manager.ResetAgentSpawning();
+        }
+        
+        Debug.Log($"[MarkerActivator]. Reset all crowd agents.");
+
+    }
+
 
     private void CompleteLap()
     {
@@ -210,8 +254,39 @@ public class MarkerActivator : MonoBehaviour
         passedMarkers.Clear();
         interactionMarkersActivated = false;
 
+        // Reset Traffic and pedestrians after each lap
+        ResetRegularTrafficCars();
+        ResetScenarioTrafficCars();
+        ResetPedestrians();
+    }
+
+
+
+    private void ResetSimulation()
+    {
         // Reset regular traffic cars
         ResetRegularTrafficCars();
+
+        // Reset scenario traffic cars
+        ResetScenarioTrafficCars();
+
+        // Reset ego car
+        SC_AVFollowSplineEgo egoCar = FindObjectOfType<SC_AVFollowSplineEgo>();
+        if (egoCar != null)
+        {
+            egoCar.ResetEgoCar();
+            Debug.Log("[MarkerActivator] Reset ego car to original position.");
+        }
+        else
+        {
+            Debug.LogWarning("[MarkerActivator] Could not find ego car to reset!");
+        }
+
+        // Reset pedestrians
+        ResetPedestrians();
+
+        // scenarioManager.isScenarioReset = true; // Set the reset flag to true
+
     }
 
     void OnTriggerExit(Collider other)

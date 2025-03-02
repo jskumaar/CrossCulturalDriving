@@ -16,6 +16,8 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     public SO_AVFollowSplineConfig ecoConfig;
     public SO_AVFollowSplineConfig stopConfig;
 
+    public MarkerActivator markerActivator;
+
     public string driveMode;
 
     private SO_AVFollowSplineConfig currentConfig;
@@ -51,18 +53,35 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
     private ScenarioManagerStartle scenarioManager;
 
+    private bool checkIgnitionPressFlag = false;
+
+    private float ignitionButtonPressNum = 0;
+
+    public Vector3 originalPos;
+    public Quaternion originalRot;
+
 
     void Start()
     {
         rb = vehicleController.GetComponent<Rigidbody>();
+        originalPos = transform.position;
+        originalRot = transform.rotation;
         currentConfig = ecoConfig;
         driveMode = "eco";
         // splineContainer = defaultSplineContainer;
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+
+        markerActivator = FindObjectOfType<MarkerActivator>();
     }
 
     private void Update() {
         if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
+            
+            // Ensure car is in original position before toggling driving mode
+            transform.position = originalPos;
+            transform.rotation = originalRot;
+            
+            
             IsDriving = !IsDriving;
             scenarioManager.isScenarioActive = IsDriving;
         }
@@ -80,7 +99,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         // }
 
         // // Check if start button is pressed
-        // KeyCode keyCode = (KeyCode)System.Enum.Parse(typeof(KeyCode), "JoystickButton" + 2);
+        // // KeyCode keyCode2 = (KeyCode)System.Enum.Parse(typeof(KeyCode), "JoystickButton" + 2);
 
         // // if (Input.GetKeyDown(keyCode))
         // if (Input.GetKeyDown(KeyCode.JoystickButton2))
@@ -122,6 +141,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
         if (configChanged){
             Debug.Log($"Current speed: {currentSpeed}, Target speed: {targetSpeed}, Desired speed: , {currentConfig.desiredSpeed}");
+            configChanged = false;
         }
 
         // Gradually adjust speed based on acceleration or deceleration rate
@@ -147,7 +167,32 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         vehicleController.SteeringInput = steeringControl;
         vehicleController.ThrottleInput = throttleControl;
 
-        // Debug.Log($"Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
+        // if (currentConfig.desiredSpeed == 0){
+        //     Debug.Log($"Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
+        // }
+
+        if (checkIgnitionPressFlag){
+            if (Input.GetKeyDown(KeyCode.JoystickButton10))
+            {
+                ignitionButtonPressNum++;
+                Debug.Log("Ignition button press count: " + ignitionButtonPressNum);
+            }
+
+            
+            if (ignitionButtonPressNum > 10){
+                checkIgnitionPressFlag = false;
+                ignitionButtonPressNum = 0;
+                ResetToNormalConfig();
+            }
+        }
+
+
+        // Deactivate Scenario if trial ended and vehicle has stopped
+        if (markerActivator.endTrial && currentSpeed < 0.1f)
+        {
+            scenarioManager.isScenarioActive = false;
+            Debug.Log("Vehicle stopped. Deactivating scenario.");
+        }
 
     }
 
@@ -168,9 +213,49 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
     // }
 
+    public void ResetEgoCar()
+    {
+        // Reset position and rotation to original values
+        transform.position = originalPos;
+        transform.rotation = originalRot;
+        
+        // Reset vehicle controller parameters
+        currentSpeed = 0f;
+        throttleControl = 0f;
+        vehicleController.ThrottleInput = 0f;
+        vehicleController.SteeringInput = 0f;
+        
+        // Reset PID controllers
+        steeringIntegral = 0f;
+        steeringPrevError = 0f;
+        speedIntegral = 0f;
+        speedPrevError = 0f;
+        
+        // Reset other state variables
+        initializedClosestT = false;
+        lastClosestT = 0f;
+        vehicleStopped = false;
+        resetToNormalConfig = false;
+        
+        Debug.Log("Ego car reset to original position and state.");
+    }
+
 
     private void UpdateConfigBasedOnMarker()
     {
+        
+        if (markerActivator.endTrial){
+            currentConfig = stopConfig;
+            configChanged = true;
+            vehicleStopped = true;
+            driveMode = "stop";
+            Debug.Log("End trial marker detected. Changing to stopConfig.");
+            Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+            return;
+        }
+        
+        
+        
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 5f);
         foreach (var hitCollider in hitColliders)
         {
@@ -209,10 +294,16 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 driveMode = "stop";
                 Debug.Log("Stop marker detected. Changing to stopConfig.");
                 Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+                // For Debugging
+                // Invoke("ResetToNormalConfig", 10f);
+                checkIgnitionPressFlag = true;
+                ignitionButtonPressNum = 0;
 
                 if (hitCollider.name.Contains("Frustration Driving 3")){
-                    Invoke("ResetToNormalConfig", 40f); // Change back to normal config after 20 seconds
+                    // Invoke("ResetToNormalConfig", 40f); // Change back to normal config after 20 seconds
                     Debug.Log("Frustration Driving 3 marker detected. Changing to stopConfig.");
+                    checkIgnitionPressFlag = true;
+                    ignitionButtonPressNum = 0;
                 }
 
                 break;
@@ -241,8 +332,17 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     private void ResetToNormalConfig()
     {
         currentConfig = normalConfig;
-        Debug.Log("Reset to normal config after 20 seconds.");
+        // Debug.Log("Reset to normal config after 20 seconds.");
         Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+    }
+
+    private void checkNButtonPresses()
+    {
+        if (Input.GetKeyDown(KeyCode.JoystickButton10))
+        {
+            Debug.Log("Ignition button pressed.");
+            checkIgnitionPressFlag = false;
+        }
     }
 
 

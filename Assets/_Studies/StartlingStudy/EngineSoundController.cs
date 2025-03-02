@@ -7,6 +7,8 @@ public class EngineSoundController : MonoBehaviour
     public AudioClip engineSoundClip; // Assign in Unity Inspector
     public AudioClip accelerationSoundClip; // Assign in Unity Inspector
 
+    public AudioClip ignitionSoundClip; // Assign in Unity Inspector
+
     [Header("Vehicle Reference")]
     public SC_AVFollowSplineEgo vehicleController; // Assign the script in Unity
 
@@ -28,6 +30,9 @@ public class EngineSoundController : MonoBehaviour
     public bool isAccelerating = false;
     public bool isCarStarted = false; // Track if the car is started
 
+    private bool ignitionButtonPressed = false; // Buffer for button press
+
+    private float buttonPressTime = 0f; // Time tracking
 
     void Start()
     {
@@ -44,22 +49,53 @@ public class EngineSoundController : MonoBehaviour
     {
         if (vehicleController == null || engineAudioSource == null) return;
 
-        // Check if the car has started moving
-        if (!isCarStarted && vehicleController.currentSpeed > 0.1f)
+        // Check if the ignition button is pressed
+        if (Input.GetKeyDown(KeyCode.JoystickButton10))
         {
-            isCarStarted = true;
-            StartEngineSound();
+            ignitionButtonPressed = true;
+            buttonPressTime = Time.time; // Store time when button is pressed
+            Debug.Log("Ignition button pressed!");
+        }
+        
+
+        // Play ignition sound for when the car is cranked (but not started)
+        if (ignitionButtonPressed && !isCarStarted){
+            StartIgnitionSound();
+            buttonPressTime = Time.time; // Store time when button is pressed
+        }
+        else if(Time.time - buttonPressTime > 1f){
+            ignitionButtonPressed = false;
+            engineAudioSource.volume = 0f; // Stop the engine sound
         }
 
-        if (vehicleController.currentSpeed < 0.1f && isCarStarted){
+        // Check if the car has started moving
+        if ((!isCarStarted && vehicleController.currentSpeed > 0.01f))
+        {
+            isCarStarted = true;
+        }
+
+        // check if the car has stopped moving
+        Debug.Log(vehicleController.currentSpeed + "...." + isCarStarted + "...." + (Time.time - buttonPressTime));
+        if (vehicleController.currentSpeed < 0.1f && isCarStarted && Time.time - buttonPressTime > 1f){
+            Debug.Log("Ego car has stopped moving.");
             isCarStarted = false;
             engineAudioSource.volume = 0f; // Stop the engine sound
         }
 
-        if (isCarStarted)
+        // Engine sound for when the car is running
+        if (isCarStarted && (Time.time - buttonPressTime) > 1f)
         {
             AdjustEngineSound();
         }
+    }
+
+
+    private void StartIgnitionSound()
+    {
+        Debug.Log("Starting ignition sound.");
+        engineAudioSource.clip = ignitionSoundClip;
+        engineAudioSource.volume = maxVolume;
+        engineAudioSource.Play();
     }
 
     private void StartEngineSound()
@@ -71,56 +107,97 @@ public class EngineSoundController : MonoBehaviour
 
     private void AdjustEngineSound()
     {
+
         // Get values from vehicle script
         float speed = vehicleController.currentSpeed;
         float throttle = vehicleController.throttleControl; // Between -1 and 1
         string driveMode = vehicleController.driveMode; // "normal", "sporty", "eco", etc.
 
-        // Normalize speed and throttle values
-        float speedFactor = Mathf.Clamp01(speed / maxSpeed);
-        float throttleFactor = Mathf.Abs(throttle); // Ignore sign for intensity
+        // Detect ignition sound
 
-        // Adjust pitch based on speed
-        targetPitch = Mathf.Lerp(minPitch, maxPitch, speedFactor);
 
-        // Adjust volume based on throttle and speed
-        targetVolume = Mathf.Lerp(minVolume, maxVolume, speedFactor * throttleFactor);
-
-        // Exaggerate pitch and volume if in sporty mode
-        if (driveMode == "sporty")
+        // Reset buttonPress if more than 1 second has passed
+        if (ignitionButtonPressed && Time.time - buttonPressTime > 1f)
         {
-            targetPitch *= sportyPitchMultiplier;
-            targetVolume *= sportyVolumeMultiplier;
+            ignitionButtonPressed = false;
+            Debug.Log("Button press reset due to timeout.");
         }
 
-        // Detect acceleration
-        bool currentlyAccelerating = throttle > previousThrottle + 0.2f;
-
-        if (currentlyAccelerating && !isAccelerating)
+        // If button is pressed and scenario is ready, activate it
+        if (ignitionButtonPressed)
         {
-            // Switch to acceleration clip
-            engineAudioSource.clip = accelerationSoundClip;
+            // Switch to ignition clip
+            engineAudioSource.clip = ignitionSoundClip;
+            engineAudioSource.volume = maxVolume;
             engineAudioSource.Play();
-            isAccelerating = true;
+
         }
-        else if (!currentlyAccelerating && isAccelerating)
+        else
         {
-            // Switch back to normal engine sound
-            engineAudioSource.clip = engineSoundClip;
-            engineAudioSource.Play();
-            isAccelerating = false;
+            
+        ////////////////////////////////////////////////////
+
+
+
+            // Normalize speed and throttle values
+            float speedFactor = Mathf.Clamp01(speed / maxSpeed);
+            float throttleFactor = Mathf.Abs(throttle); // Ignore sign for intensity
+
+            // Adjust pitch based on speed
+            targetPitch = Mathf.Lerp(minPitch, maxPitch, speedFactor);
+
+            // Adjust volume based on throttle and speed
+            targetVolume = Mathf.Lerp(minVolume, maxVolume, speedFactor * throttleFactor);
+
+            // Exaggerate pitch and volume if in sporty mode
+            if (driveMode == "sporty")
+            {
+                targetPitch *= sportyPitchMultiplier;
+                targetVolume *= sportyVolumeMultiplier;
+            }
+            ////////////////////////////////////////////////////
+
+            // Detect acceleration
+            bool currentlyAccelerating = false;
+            if ((throttle > previousThrottle + 0.1f) || (throttle > 0.8f))
+            {
+                currentlyAccelerating = true;
+            }
+
+            // Debug.Log(throttle + "...." + previousThrottle + "Currently accelerating? " + currentlyAccelerating + ". isAccelerating? " + isAccelerating);
+            if (currentlyAccelerating && !isAccelerating)
+            {
+                // Switch to acceleration clip
+                engineAudioSource.clip = accelerationSoundClip;
+                engineAudioSource.Play();
+                isAccelerating = true;
+                // Debug.Log("Switched to acceleration sound.");
+            }
+            else if (!currentlyAccelerating && isAccelerating)
+            {
+                // Switch back to normal engine sound
+                engineAudioSource.clip = engineSoundClip;
+                engineAudioSource.Play();
+                isAccelerating = false;
+                // Debug.Log("Switched back to normal engine sound.");
+            }
+            ////////////////////////////////////////////////////
+
+
+
+            // Apply pitch and volume
+            engineAudioSource.pitch = targetPitch;
+            engineAudioSource.volume = Mathf.Clamp(targetVolume, minVolume, maxVolume * sportyVolumeMultiplier);
+
+            // Detect sudden deceleration (engine braking)
+            if (throttle < previousThrottle - 0.2f)
+            {
+                engineAudioSource.pitch *= 0.7f; // Slightly drop pitch for engine braking effect
+            }
+
+            previousThrottle = throttle; // Store last throttle value
         }
 
-        // Apply pitch and volume
-        engineAudioSource.pitch = targetPitch;
-        engineAudioSource.volume = Mathf.Clamp(targetVolume, minVolume, maxVolume * sportyVolumeMultiplier);
 
-        // Detect sudden deceleration (engine braking)
-        if (throttle < previousThrottle - 0.2f)
-        {
-            engineAudioSource.pitch *= 0.7f; // Slightly drop pitch for engine braking effect
-        }
-
-        previousThrottle = throttle; // Store last throttle value
     }
 }

@@ -27,6 +27,7 @@ TagManager:
   - TrafficCar
   - RegularTrafficCar
   - StreetCart
+  - CrowdAgentCrosswalk
   layers:
   - Default
   - TransparentFX

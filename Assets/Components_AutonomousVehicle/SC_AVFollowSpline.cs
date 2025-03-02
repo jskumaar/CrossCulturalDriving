@@ -53,6 +53,11 @@ public class SC_AVFollowSpline : MonoBehaviour
 
     private void Update() {
         if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
+            
+            // Ensure car is in original position
+            transform.position = originalPos;
+            transform.rotation = originalRot;
+            
             IsDriving = !IsDriving;
         }
     }

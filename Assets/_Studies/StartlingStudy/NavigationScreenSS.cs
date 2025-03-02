@@ -41,7 +41,7 @@ public class NavigationScreenSS : ReplayBehaviour
         { "surprise_alert_trigger_3", IconType.warning },
         { "surprise_alert_trigger_4", IconType.Left },
         { "frustration_alert_trigger_1", IconType.Left },
-        { "frustration_alert_trigger_2", IconType.Right },
+        { "frustration_alert_trigger_2", IconType.Left },
         { "frustration_alert_trigger_3", IconType.gradient },
         { "frustration_alert_trigger_4", IconType.pedestrian },
         { "confusion_alert_trigger_1_action_end", IconType.blankScreen },

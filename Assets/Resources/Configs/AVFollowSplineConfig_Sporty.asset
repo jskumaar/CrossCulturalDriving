@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lookAheadDistance: 6
   desiredSpeed: 10
-  Kp_steering: 4
-  Ki_steering: 0.2
-  Kd_steering: 0.05
-  Kp_speed: 5
+  Kp_steering: 1
+  Ki_steering: 0.1
+  Kd_steering: 0.03
+  Kp_speed: 2
   Ki_speed: 0.02
   Kd_speed: 0.01
-  decelerationRate: 4
+  decelerationRate: 2

@@ -43,17 +43,21 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
     private ScenarioManagerStartle scenarioManager;
 
-
+    [Header("Spawn Area Settings")]
+    [SerializeField] public string spawnAreaTag = "CrowdAgent"; // Can be "CrowdAgent" or "CrowdAgentCrosswalk"
+    
 
 
     void Awake()
     {
-        if (Singleton)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Singleton = this;
+        // if (Singleton)
+        // {
+        //     // Destroy(gameObject);
+        //     // Instead of destroying the component, just disable it
+        //     this.enabled = false;
+        //     return;
+        // }
+        // Singleton = this;
     }
 
     void Start()
@@ -70,7 +74,9 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
         if (!IsServer)
         {
-            Destroy(this);
+            // Destroy(this);
+            // Instead of destroying the component, just disable it
+            this.enabled = false;
             return;
         }
 
@@ -78,16 +84,17 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
         BoxCollider[] foundSpawnAreas = FindObjectsOfType<BoxCollider>();
         foreach (var area in foundSpawnAreas)
         {
-            if (area.gameObject.CompareTag("CrowdAgent"))
+            if (area.gameObject.CompareTag(spawnAreaTag))
             {
                 spawnAreas.Add(area);
                 activeAgentCount[area] = 0;
+                Debug.Log($"Added Spawn area '{area.name}' with tag '{spawnAreaTag}' to manager '{gameObject.name}'");
             }
         }
 
         if (spawnAreas.Count == 0)
         {
-            Debug.LogError("No spawn areas defined. Make sure to tag the CrowdAgent as 'CrowdAgent'.");
+            Debug.LogError($"No spawn areas defined. Make sure to tag the '{spawnAreaTag}' as 'CrowdAgent'.");
             return;
         }
 
@@ -141,43 +148,78 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
     void RandomSpawn()
     {
-        if (spawnAreas.Count == 0) return;
+        if (spawnAreas.Count == 0)
+        {
+            Debug.LogWarning($"No spawn areas available with tag '{spawnAreaTag}' for manager '{gameObject.name}'");
+            return;
+        }
 
-        List<BoxCollider> availableSpawnAreas = spawnAreas.FindAll(a => activeAgentCount[a] < maxAgentCountPerArea);
-        if (availableSpawnAreas.Count == 0) return;
+        // Get available areas
+        List<BoxCollider> availableSpawnAreas = new List<BoxCollider>();
+        foreach (var area in spawnAreas)
+        {
+            if (area != null && activeAgentCount.ContainsKey(area) && activeAgentCount[area] < maxAgentCountPerArea)
+            {
+                availableSpawnAreas.Add(area);
+            }
+        }
+        
+        if (availableSpawnAreas.Count == 0)
+        {
+            // Debug.LogWarning($"All spawn areas for tag '{spawnAreaTag}' are at capacity");
+            return;
+        }
 
         BoxCollider selectedSpawnArea = availableSpawnAreas[Random.Range(0, availableSpawnAreas.Count)];
         Vector3? spawnPosition = SelectRandomBirthplace(selectedSpawnArea);
         if (spawnPosition == null) return;
 
         // Print the spawn area information
-        Debug.Log($"Spawning agent in area: {selectedSpawnArea.name} with bounds: " +
-                $"Center({selectedSpawnArea.bounds.center}), " +
-                $"Size({selectedSpawnArea.bounds.size})");
+        // Debug.Log($"Spawning agent in area: {selectedSpawnArea.name} with bounds: " +
+        //         $"Center({selectedSpawnArea.bounds.center}), " +
+        //         $"Size({selectedSpawnArea.bounds.size})");
 
         GameObject randomPrefab = agentPrefabs[Random.Range(0, agentPrefabs.Length)];
         GameObject agentInstance = Instantiate(randomPrefab, spawnPosition.Value, Quaternion.identity);
 
-        agentInstance.GetComponent<NetworkObject>().Spawn();
-        agentInstance.transform.parent = agentSpawn;
+        // agentInstance.GetComponent<NetworkObject>().Spawn();
+
+        NetworkObject networkObject = agentInstance.GetComponent<NetworkObject>();
+        if (networkObject != null)
+        {
+            networkObject.Spawn();
+            
+            // AFTER spawning, you can reparent
+            agentInstance.transform.parent = agentSpawn;
+        }
+        else
+        {
+            // If there's no NetworkObject, you can reparent immediately
+            agentInstance.transform.parent = agentSpawn;
+        }
+    
+
+        // agentInstance.transform.parent = agentSpawn;
         agentInstances.Add(agentInstance);
 
         // Post-spawn validation
         if (!selectedSpawnArea.bounds.Contains(agentInstance.transform.position) ||
             !NavMesh.SamplePosition(agentInstance.transform.position, out _, 1f, NavMesh.AllAreas))
         {
-            Debug.LogWarning("Agent spawned outside bounds or off NavMesh. Destroying and retrying...");
+            // Debug.LogWarning("Agent spawned outside bounds or off NavMesh. Destroying and retrying...");
             RemoveAgent(selectedSpawnArea, agentInstance);
             RandomSpawn(); // Retry spawning
             return;
         }
 
-        Debug.Log($"Agent spawned at {agentInstance.transform.position} inside {selectedSpawnArea.name}");
+        // Debug.Log($"Agent spawned at {agentInstance.transform.position} inside {selectedSpawnArea.name}");
 
         // Store the spawn area for this agent
         agentSpawnAreaMap[agentInstance] = selectedSpawnArea;
 
-        agentInstance.AddComponent<AgentBoundsHandler>().Initialize(selectedSpawnArea);
+        // agentInstance.AddComponent<AgentBoundsHandler>().Initialize(selectedSpawnArea);
+        agentInstance.AddComponent<AgentBoundsHandler>().Initialize(selectedSpawnArea, this);
+
         activeAgentCount[selectedSpawnArea]++;
 
         initialPositions[agentInstance] = spawnPosition.Value;
@@ -188,6 +230,14 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
     Vector3? SelectRandomBirthplace(BoxCollider spawnArea) // Nullable Vector3
     {
+        
+        // Add null check at the beginning
+        if (spawnArea == null)
+        {
+            Debug.LogWarning("Attempted to use a destroyed spawn area BoxCollider");
+            return null;
+        }
+
         Vector3 randomDest;
         NavMeshHit hit;
         int attempts = 0;
@@ -228,6 +278,104 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
             }
         }
     }
+
+    public void ResetAgentPosition(GameObject agent, BoxCollider spawnArea)
+    {
+        
+        // Before actually rerouting, check if we've done so recently
+        if (lastRerouteTimes.TryGetValue(agent, out float lastTime))
+        {
+            if (Time.time - lastTime < rerouteCooldown)
+            {
+                // If we're still in cooldown, skip
+                return;
+            }
+        }
+            
+        
+        // Debug.Log($"Agent {agent.name} is being reset to initial spawn area...");
+
+        if (initialPositions.TryGetValue(agent, out Vector3 initialPosition))
+        {
+            // Debug.Log($"Resetting agent {agent.name} to initial spawn position...");
+            agent.GetComponent<NavMeshAgent>().Warp(initialPosition);
+            agent.GetComponent<AgentBoundsHandler>().SetNewRandomDestination(spawnArea);
+
+            // Record the time of this reroute
+            lastRerouteTimes[agent] = Time.time;
+        }
+    }
+
+    public void ResetAgentSpawning()
+    {
+        // Cancel any ongoing spawn invoking
+        if (spawnOverTime)
+        {
+            CancelInvoke(nameof(RandomSpawn));
+        }
+        
+        // Remove all existing agents
+        for (int i = agentInstances.Count - 1; i >= 0; i--)
+        {
+            GameObject agent = agentInstances[i];
+            if (agent != null)
+            {
+                // Get the spawn area for proper cleanup
+                if (agentSpawnAreaMap.TryGetValue(agent, out BoxCollider spawnArea))
+                {
+                    // Proper NetworkObject cleanup before destruction
+                    NetworkObject networkObject = agent.GetComponent<NetworkObject>();
+                    if (networkObject != null && networkObject.IsSpawned)
+                    {
+                        networkObject.Despawn();
+                    }
+                    
+                    Destroy(agent);
+                    
+                    // Update counters
+                    if (activeAgentCount.ContainsKey(spawnArea))
+                    {
+                        activeAgentCount[spawnArea]--;
+                    }
+                }
+            }
+        }
+        
+        // Clear all collections
+        agentInstances.Clear();
+        agentSpawnAreaMap.Clear();
+        lastPositions.Clear();
+        stuckCounts.Clear();
+        stuckTimers.Clear();
+        initialPositions.Clear();
+        lastRerouteTimes.Clear();
+        
+        // Reset area counters
+        foreach (BoxCollider area in spawnAreas)
+        {
+            if (area != null)
+            {
+                activeAgentCount[area] = 0;
+            }
+        }
+        
+        // Restart spawning
+        if (spawnOnStart)
+        {
+            for (int i = 0; i < initialSpawnCount; i++)
+            {
+                RandomSpawn();
+            }
+            
+            if (spawnOverTime)
+            {
+                InvokeRepeating(nameof(RandomSpawn), spawnRate, spawnRate);
+            }
+        }
+        
+        Debug.Log($"Reset completed for {gameObject.name} with tag {spawnAreaTag}");
+    }
+
 
     // private void CheckAndRerouteAgents()
     // {
@@ -309,32 +457,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
     }
 
 
-    private void ResetAgentPosition(GameObject agent, BoxCollider spawnArea)
-    {
-        
-        // Before actually rerouting, check if we've done so recently
-        if (lastRerouteTimes.TryGetValue(agent, out float lastTime))
-        {
-            if (Time.time - lastTime < rerouteCooldown)
-            {
-                // If we're still in cooldown, skip
-                return;
-            }
-        }
-            
-        
-        Debug.Log($"Agent {agent.name} is being reset to initial spawn area...");
 
-        if (initialPositions.TryGetValue(agent, out Vector3 initialPosition))
-        {
-            Debug.Log($"Resetting agent {agent.name} to initial spawn position...");
-            agent.GetComponent<NavMeshAgent>().Warp(initialPosition);
-            agent.GetComponent<AgentBoundsHandler>().SetNewRandomDestination(spawnArea);
-
-            // Record the time of this reroute
-            lastRerouteTimes[agent] = Time.time;
-        }
-    }
 
 
     private void RerouteAgent(GameObject agent, BoxCollider spawnArea)
@@ -350,7 +473,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
             }
         }
         
-        Debug.Log($"Agent {agent.name} is being rerouted...");
+        // Debug.Log($"Agent {agent.name} is being rerouted...");
 
         NavMeshAgent navAgent = agent.GetComponent<NavMeshAgent>();
         if (navAgent == null) return;
@@ -370,6 +493,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
     }
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -377,11 +501,14 @@ public class AgentBoundsHandler : MonoBehaviour
 {
     private NavMeshAgent agent;
     private BoxCollider currentBounds;
+    private CrowdAgentManagerMulti myManager;
 
-    public void Initialize(BoxCollider bounds)
+    public void Initialize(BoxCollider bounds, CrowdAgentManagerMulti manager)
     {
+        myManager = manager;
         agent = GetComponent<NavMeshAgent>();
         currentBounds = bounds;
+
         if (agent == null)
         {
             Debug.LogError("NavMeshAgent is missing on agent: " + gameObject.name);
@@ -389,6 +516,7 @@ public class AgentBoundsHandler : MonoBehaviour
         }
         SetNewRandomDestination(bounds);
     }
+
 
     public bool IsOutOfBounds(Vector3 position, BoxCollider bounds)
     {
@@ -430,12 +558,11 @@ public class AgentBoundsHandler : MonoBehaviour
             if (!IsPlayerNearby())
             {
                 // Find the manager and remove the agent properly
-                CrowdAgentManagerMulti manager = CrowdAgentManagerMulti.Singleton;
-                if (manager != null)
+                if (myManager != null)
                 {
-                    if (manager.agentSpawnAreaMap.TryGetValue(gameObject, out BoxCollider spawnArea))  // ✅ Fixed: Declare `spawnArea` before using it
+                    if (myManager.agentSpawnAreaMap.TryGetValue(gameObject, out BoxCollider spawnArea))  // ✅ Fixed: Declare `spawnArea` before using it
                     {
-                        manager.RemoveAgent(spawnArea, gameObject);
+                        myManager.RemoveAgent(spawnArea, gameObject);
                     }
                     else
                     {
