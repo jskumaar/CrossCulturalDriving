@@ -354,6 +354,7 @@ public class CommunicationManager : MonoBehaviour
         foreach (var scenario in scenarios)
             if (message.ToLower().Contains(scenario))
                 scenarioManager.currentScenario = scenario;
+                scenarioManager.newScenario = true;
         
         // Listen for 'Start Unity Simulation' message from the server
         // if (message.ToLower().Contains("start") && message.ToLower().Contains("unity"))

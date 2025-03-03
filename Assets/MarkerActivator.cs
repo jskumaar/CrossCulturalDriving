@@ -6,7 +6,7 @@ public class MarkerActivator : MonoBehaviour
     private ScenarioManagerStartle scenarioManager;
     private int markersPassed = 0;
     private int totalMarkers = 5; // Adjust based on the actual number of ProgressMarkers
-    private int currentLap = 4;
+    private int currentLap = 1;
     private HashSet<int> passedMarkers = new HashSet<int>();
     private bool interactionMarkersActivated = false;
     private Dictionary<string, GameObject> markerDictionary = new Dictionary<string, GameObject>();
@@ -105,25 +105,16 @@ public class MarkerActivator : MonoBehaviour
                 markersPassed++;
                 Debug.Log($"Passed ProgressMarker: {markerNumber}");
 
-
-                // For first scenario
-                if (markerNumber==0 && currentLap ==1)
+                // Check and activate markers for a new scenario
+                scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
+                if (scenarioManager.newScenario && (markerNumber < 1 || (markerNumber >= totalMarkers - 1)))
                 {
-                    scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
                     ActivateInteractionMarkers();
                     ActivateScenarioTrafficCars();
                     ActivateStreetCart();
-
+                    scenarioManager.newScenario = false; // Reset new scenario flag
                 }
 
-                // For subsequent scenarios
-                if (markerNumber >= totalMarkers - 1)
-                {
-                    scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
-                    ActivateInteractionMarkers();
-                    ActivateScenarioTrafficCars();
-                    ActivateStreetCart();
-                }
 
                 // Check if the lap is complete
                 if (markerNumber == totalMarkers)
@@ -212,8 +203,9 @@ public class MarkerActivator : MonoBehaviour
             string carName = kvp.Key;
             GameObject car = kvp.Value;
             
-            car.transform.position = car.GetComponent<SC_AVFollowSpline>().originalPos;
-            car.transform.rotation = car.GetComponent<SC_AVFollowSpline>().originalRot;
+            SC_AVFollowSpline carController = car.GetComponent<SC_AVFollowSpline>();
+
+            carController.ResetCar();
         }
         Debug.Log($"[MarkerActivator] Reset regular traffic cars to original positions.");
     }
@@ -225,10 +217,11 @@ public class MarkerActivator : MonoBehaviour
             string carName = kvp.Key;
             GameObject car = kvp.Value;
             
-            car.transform.position = car.GetComponent<SC_AVFollowSpline>().originalPos;
-            car.transform.rotation = car.GetComponent<SC_AVFollowSpline>().originalRot;
+            SC_AVFollowSpline carController = car.GetComponent<SC_AVFollowSpline>();
+
+            carController.ResetCar();
         }
-        Debug.Log($"[MarkerActivator] Reset regular traffic cars to original positions.");
+        Debug.Log($"[MarkerActivator] Reset scenario traffic cars to original positions.");
     }
 
 
@@ -256,7 +249,7 @@ public class MarkerActivator : MonoBehaviour
 
         // Reset Traffic and pedestrians after each lap
         ResetRegularTrafficCars();
-        ResetScenarioTrafficCars();
+        // ResetScenarioTrafficCars();
         ResetPedestrians();
     }
 
@@ -267,8 +260,8 @@ public class MarkerActivator : MonoBehaviour
         // Reset regular traffic cars
         ResetRegularTrafficCars();
 
-        // Reset scenario traffic cars
-        ResetScenarioTrafficCars();
+        // // Reset scenario traffic cars
+        // ResetScenarioTrafficCars();
 
         // Reset ego car
         SC_AVFollowSplineEgo egoCar = FindObjectOfType<SC_AVFollowSplineEgo>();

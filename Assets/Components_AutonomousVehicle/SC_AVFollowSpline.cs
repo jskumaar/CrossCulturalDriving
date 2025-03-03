@@ -112,6 +112,36 @@ public class SC_AVFollowSpline : MonoBehaviour
         vehicleController.ThrottleInput = throttleControl;
     }
 
+
+    public void ResetCar()
+    {
+        // Reset position and rotation to original values
+        transform.position = originalPos;
+        transform.rotation = originalRot;
+        
+        // Reset vehicle controller parameters
+        vehicleController.ThrottleInput = 0f;
+        vehicleController.SteeringInput = 0f;
+        
+        // Reset PID controllers
+        steeringIntegral = 0f;
+        steeringPrevError = 0f;
+        speedIntegral = 0f;
+        speedPrevError = 0f;
+
+        //Spline following states?
+        
+        // Reset other state variables
+        initializedClosestT = false;
+        lastClosestT = 0f;
+
+        // //Physics states
+        // rb.velocity = Vector3.zero;
+        // rb.angularVelocity = Vector3.zero;
+        
+        // Debug.Log($"Car {this.name} reset to original position and state.");
+    }
+
     private float PIDControl(float error, ref float integral, ref float prevError, float Kp, float Ki, float Kd)
     {
         float dt = Time.fixedDeltaTime;
@@ -267,4 +297,6 @@ public class SC_AVFollowSpline : MonoBehaviour
             Gizmos.DrawLine(transform.position, transform.position + errorVector * 5f);
         }
     }
+
+    
 }

@@ -49,6 +49,10 @@ public class StartleTrigger : MonoBehaviour
 
             // CommunicationManager.Instance.TriggerExited(triggerID); // Notify broadcaster
             CommunicationManager.Instance.SendMessageToServer($"TRIGGER_EXITED: {triggerID}");
+
+            if (triggerID == "frustration_alert_trigger_3_action_end"){
+                CommunicationManager.Instance.SendMessageToServer("alert_frustration_stop");
+            }
         }
     }
 }

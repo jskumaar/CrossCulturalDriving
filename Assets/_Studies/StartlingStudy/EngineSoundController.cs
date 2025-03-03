@@ -75,7 +75,6 @@ public class EngineSoundController : MonoBehaviour
         }
 
         // check if the car has stopped moving
-        Debug.Log(vehicleController.currentSpeed + "...." + isCarStarted + "...." + (Time.time - buttonPressTime));
         if (vehicleController.currentSpeed < 0.1f && isCarStarted && Time.time - buttonPressTime > 1f){
             Debug.Log("Ego car has stopped moving.");
             isCarStarted = false;

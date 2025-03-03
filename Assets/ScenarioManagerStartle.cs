@@ -9,12 +9,15 @@ public class ScenarioManagerStartle : MonoBehaviour
     public bool isScenarioActive = false;
 
     public bool isScenarioReady = false; // Indicates if the scenario is ready to start
+
+    public bool newScenario = false; // Indicates if a new scenario is being loaded
     
     // public bool isScenarioReset = false; // Indicates if the scenario is reset
 
     private bool buttonPressed = false; // Buffer for button press
 
     private float buttonPressTime = 0f; // Time tracking
+
 
 
     // Start is called before the first frame update
@@ -39,7 +42,7 @@ public class ScenarioManagerStartle : MonoBehaviour
         {
             isScenarioActive = true;
             Debug.Log("Start button pressed!");
-            CommunicationManager.Instance.SendMessageToServer("Start button pressed.");
+            CommunicationManager.Instance.SendMessageToServer("ignition_trigger");
             buttonPressed = false; // Reset button press after activation
         }
         else if (!isScenarioReady)
