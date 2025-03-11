@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using Random = UnityEngine.Random;
 
-public class CrowdAgentManagerMulti : NetworkBehaviour
+public class CrowdAgentManagerMulti : MonoBehaviour
 {
     public GameObject[] agentPrefabs;
     public int initialSpawnCount = 10;
@@ -39,7 +39,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
 
     private Dictionary<GameObject, Vector3> initialPositions = new Dictionary<GameObject, Vector3>();
     private Dictionary<GameObject, float> lastRerouteTimes = new Dictionary<GameObject, float>();
-    private float rerouteCooldown = 3f; // 3-second cooldown
+    private float rerouteCooldown = 1f; // cooldown
 
     private ScenarioManagerStartle scenarioManager;
 
@@ -72,13 +72,13 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
             Debug.Log("Cannot get building blocks.");
         }
 
-        if (!IsServer)
-        {
-            // Destroy(this);
-            // Instead of destroying the component, just disable it
-            this.enabled = false;
-            return;
-        }
+        // if (!IsServer)
+        // {
+        //     // Destroy(this);
+        //     // Instead of destroying the component, just disable it
+        //     this.enabled = false;
+        //     return;
+        // }
 
         // Initialize spawn areas
         BoxCollider[] foundSpawnAreas = FindObjectsOfType<BoxCollider>();
@@ -428,7 +428,7 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
             return;
         }
 
-        if (Vector3.Distance(lastPositions[agent], agent.transform.position) < 0.01f)
+        if (Vector3.Distance(lastPositions[agent], agent.transform.position) < 0.05f)
         {
             stuckCounts[agent]++;
             if (!stuckTimers.ContainsKey(agent)) stuckTimers[agent] = Time.time;
@@ -489,7 +489,10 @@ public class CrowdAgentManagerMulti : NetworkBehaviour
         // Record the time of this reroute
         lastRerouteTimes[agent] = Time.time;
 
-        agent.GetComponent<AgentBoundsHandler>().Invoke(nameof(AgentBoundsHandler.RerouteToValidPosition), 2f);
+        agent.GetComponent<AgentBoundsHandler>().RerouteToValidPosition(); // Reroute immediately
+
+        // Reroute after a delay
+        // agent.GetComponent<AgentBoundsHandler>().Invoke(nameof(AgentBoundsHandler.RerouteToValidPosition), 2f);
     }
 }
 
@@ -580,16 +583,20 @@ public class AgentBoundsHandler : MonoBehaviour
 
     private Vector3 GetRandomPointInsideBounds(BoxCollider bounds)
     {
-        Vector3 randomPos;
         NavMeshHit hit;
         int attempts = 0;
 
-        while (attempts < 10) // Try up to 10 times
+        while (attempts < 20) // Try up to N times
         {
-            randomPos = new Vector3(
-                Random.Range(bounds.bounds.min.x, bounds.bounds.max.x),
-                bounds.transform.position.y,
-                Random.Range(bounds.bounds.min.z, bounds.bounds.max.z)
+            // randomPos = new Vector3(
+            //     Random.Range(bounds.bounds.min.x, bounds.bounds.max.x),
+            //     bounds.transform.position.y,
+            //     Random.Range(bounds.bounds.min.z, bounds.bounds.max.z)
+            // );
+            Vector3 randomPos = bounds.bounds.center + new Vector3(
+            Random.Range(-bounds.bounds.extents.x * 0.8f, bounds.bounds.extents.x * 0.8f),
+            0,
+            Random.Range(-bounds.bounds.extents.z * 0.8f, bounds.bounds.extents.z * 0.8f)
             );
 
             if (NavMesh.SamplePosition(randomPos, out hit, 5f, NavMesh.AllAreas) && bounds.bounds.Contains(hit.position))

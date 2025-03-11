@@ -27,16 +27,6 @@ public class StartleTrigger : MonoBehaviour
             
             NavigationScreenSS.TriggerIconChange(triggerID); // Notify NavigationScreenSS to update the GPS screen
 
-
-            if (this.gameObject.name.Contains("3 action end"))
-            {
-                Debug.Log("All interactions completed for this scenario.");
-                scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
-                scenarioManager.currentStimulus = "random";
-                scenarioManager.currentScenario = "random";
-            }
-
-
         }
     }
 
@@ -47,8 +37,12 @@ public class StartleTrigger : MonoBehaviour
             Debug.Log($"Car exited trigger zone: {triggerID}");
             hasCarEntered = false;
 
-            // CommunicationManager.Instance.TriggerExited(triggerID); // Notify broadcaster
-            CommunicationManager.Instance.SendMessageToServer($"TRIGGER_EXITED: {triggerID}");
+            // Two ecomarkers are used to bring the car back from sporty to eco modes during surprise and confusion driving interactions (the startling interaction; but this should not trigger anything in the backend)
+            if (!triggerID.Contains("ecomarker"))
+            {
+                CommunicationManager.Instance.SendMessageToServer($"TRIGGER_EXITED: {triggerID}"); // Notify server
+            }
+            
 
             if (triggerID == "frustration_alert_trigger_3_action_end"){
                 CommunicationManager.Instance.SendMessageToServer("alert_frustration_stop");

@@ -6,11 +6,12 @@ using System.Collections;
 
 public class SC_AVFollowSplineEgo : MonoBehaviour
 {
-    // public SplineContainer defaultSplineContainer;
-    // public SplineContainer surpriseAlertSplineContainer;
-    // private SplineContainer splineContainer;
+    public SplineContainer defaultSplineContainer;
+    public SplineContainer surpriseAlertSplineContainer;
+    public SplineContainer confusionDrivingSplineContainer;
+    private SplineContainer splineContainer;
 
-    public SplineContainer splineContainer;
+    // public SplineContainer splineContainer;
     public NetworkVehicleController vehicleController; 
     public SO_AVFollowSplineConfig normalConfig;
     public SO_AVFollowSplineConfig sportyConfig;
@@ -60,7 +61,16 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
     public Vector3 originalPos;
     public Quaternion originalRot;
+    private SO_AVFollowSplineConfig pendingConfig;
+    private float configChangeDelay = 2f; // Adjust delay time in seconds
 
+    private float stopSignWaitTime = 2f;
+    private bool configChangePending = false;
+    private Coroutine configChangeCoroutine;
+
+    private bool indicatorLeft, indicatorRight, newButtonPress;  // variables to control indicator lights
+
+    private float buttonPressTime = 0f;
 
     void Start()
     {
@@ -69,25 +79,48 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         originalRot = transform.rotation;
         currentConfig = ecoConfig;
         driveMode = "eco";
-        // splineContainer = defaultSplineContainer;
+        splineContainer = defaultSplineContainer;
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
 
         markerActivator = FindObjectOfType<MarkerActivator>();
+        newButtonPress = false;
     }
 
     private void Update() {
-        if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
-            
-            // Ensure car is in original position before toggling driving mode
-            transform.position = originalPos;
-            transform.rotation = originalRot;
-            
-            
-            IsDriving = !IsDriving;
-            scenarioManager.isScenarioActive = IsDriving;
+        
+        // Get updated scenario from ScenarioManager
+        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+        if (scenarioManager.newScenario)
+        {
+            // Debug.Log("New scenario detected. Checking spline container.");
+            if (scenarioManager.currentStimulus == "surprise" && scenarioManager.currentScenario == "alert")
+            {
+                splineContainer = surpriseAlertSplineContainer;
+                // Debug.Log("Switching to surpriseAlertSplineContainer.");
+            }
+            else if (scenarioManager.currentStimulus == "confusion" && scenarioManager.currentScenario == "driving")
+            {
+                splineContainer = confusionDrivingSplineContainer;
+                // Debug.Log("Switching to confusionDrivingSplineContainer.");
+            }
+            else
+            {
+                splineContainer = defaultSplineContainer;
+                // Debug.Log("Switching to defaultSplineContainer.");
+            }
         }
 
         
+        // if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
+            
+        //     // Ensure car is in original position before toggling driving mode
+        //     transform.position = originalPos;
+        //     transform.rotation = originalRot;
+            
+            
+        //     IsDriving = !IsDriving;
+        //     scenarioManager.isScenarioActive = IsDriving;
+        // }
 
         // // Detect steering wheel button presses
         // for (int i = 0; i <= 19; i++)
@@ -117,7 +150,11 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         
         IsDriving = scenarioManager.isScenarioActive;
 
+        indicatorLeft = false;
+        indicatorRight = false;
+
         if (splineContainer == null || splineContainer.Splines.Count == 0 || !IsDriving) {
+            Debug.LogWarning("Spline" + (splineContainer == null ? " is null" : " has no splines. Driving? ") + IsDriving);
             return;
         }
 
@@ -142,36 +179,122 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         float targetSpeed = currentConfig.desiredSpeed;
 
         if (configChanged){
-            Debug.Log($"Current speed: {currentSpeed}, Target speed: {targetSpeed}, Desired speed: , {currentConfig.desiredSpeed}");
+            // Debug.Log($"Current speed: {currentSpeed}, Target speed: {targetSpeed}, Desired speed: , {currentConfig.desiredSpeed}");
             configChanged = false;
         }
 
-        // Gradually adjust speed based on acceleration or deceleration rate
-        if (targetSpeed > currentSpeed + 2)
+        // Determine if we're trying to stop (when target speed is near zero)
+        bool tryingToStop = targetSpeed < 0.1f;
+
+        // reset vehicle stopped flag
+        if (vehicleStopped && currentSpeed > 4.95f)
         {
-            currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, -currentConfig.decelerationRate * Time.deltaTime);
-        }
-        else if (targetSpeed < currentSpeed - 2)
-        {
-            currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, currentConfig.decelerationRate * Time.deltaTime);
+            vehicleStopped = false;
+            Debug.Log("Vehicle moving again. Resetting vehicleStopped flag.");
         }
 
-        float speedError = targetSpeed - currentSpeed;
+        if (tryingToStop)
+        {
+            // Apply much stronger braking when trying to stop completely
+            float emergencyBrakingForce = currentConfig.decelerationRate * 1.0f;
+            currentSpeed = Mathf.MoveTowards(currentSpeed, 0f, emergencyBrakingForce * Time.deltaTime);
+            
+            // Override PID control with direct maximum braking when speed is still significant
+            if (currentSpeed > 0.1f)
+            {
+                throttleControl = -0.7f; // Maximum braking
+                
+                // Reset speed PID to prevent integral windup
+                speedIntegral = 0f;
+                speedPrevError = 0f;
+                
+                // Skip regular PID calculation for throttle when in emergency stop mode
+            }
+            else if (currentSpeed <= 0.1f)
+            {
+                // When nearly stopped, set speed to exactly zero and apply full brake
+                currentSpeed = 0f;
+                throttleControl = 0f;
+                
+                // Apply parking brake effect by adding resistance
+                rb.drag = 10f; // Temporarily increase drag to simulate parking brake
+            }
+        }
+        else
+        {
+            // Reset drag when not stopping
+            rb.drag = 0.01f; // Use your normal drag value here
+            
+            // Normal acceleration/deceleration logic
+            if (targetSpeed > currentSpeed)
+            {
+                // Acceleration
+                currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, currentConfig.accelerationRate * Time.deltaTime);
+            }
+            else if (targetSpeed < currentSpeed)
+            {
+                // Normal deceleration
+                currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, -currentConfig.decelerationRate * Time.deltaTime);
+            }
+            
+            // Calculate speed error and use PID for normal driving
+            float speedError = targetSpeed - currentSpeed;
+            throttleControl = PIDControl(speedError, ref speedIntegral, ref speedPrevError, 
+                                            currentConfig.Kp_speed, currentConfig.Ki_speed, currentConfig.Kd_speed);
+            throttleControl = Mathf.Clamp(throttleControl, -1f, 1f);
+        }
 
+        // Steering control is always calculated (even when stopping)
         steeringControl = PIDControl(_headingError, ref steeringIntegral, ref steeringPrevError, 
-                                           currentConfig.Kp_steering, currentConfig.Ki_steering, currentConfig.Kd_steering);
+                                        currentConfig.Kp_steering, currentConfig.Ki_steering, currentConfig.Kd_steering);
         steeringControl = Mathf.Clamp(steeringControl, -1f, 1f);
 
-        throttleControl = PIDControl(speedError, ref speedIntegral, ref speedPrevError, 
-                                           currentConfig.Kp_speed, currentConfig.Ki_speed, currentConfig.Kd_speed);
-        throttleControl = Mathf.Clamp(throttleControl, -1f, 1f);
+        // Check for left/right turn indicators based on steering control
+        if (steeringControl > 0.1f)
+        {
+            indicatorRight = true;
+            // Debug.Log($"Heading error: {_headingError}, Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
 
+        }
+        else if (steeringControl < -0.1f)
+        {
+            indicatorLeft = true;
+            // Debug.Log($"Heading error: {_headingError}, Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
+        }
+
+
+        // Apply the calculated controls to the vehicle
         vehicleController.SteeringInput = steeringControl;
         vehicleController.ThrottleInput = throttleControl;
+        // vehicleController.tempLeft = indicatorLeft;
+        // vehicleController.tempRight = indicatorRight;
 
-        // if (currentConfig.desiredSpeed == 0){
-        //     Debug.Log($"Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
+        // check if indicator is active and if indicatorLeft or indicatorRight is still true or false after 5 seconds (enough time to start making a turn?)
+        if ((!newButtonPress) && (vehicleController.tempLeft || vehicleController.tempRight))
+        {
+            newButtonPress = true;
+            buttonPressTime = Time.time;
+            Debug.Log("Indicator active.");
+        }
+        
+        if (newButtonPress && Time.time - buttonPressTime > 5f)
+        {
+            vehicleController.tempLeft = indicatorLeft;
+            vehicleController.tempRight = indicatorRight;
+
+            if (!indicatorLeft && !indicatorRight)
+            {
+                newButtonPress = false;
+                Debug.Log("Indicator off.");
+            }
+        }
+
+        // // Add debug logging when in stopping mode
+        // if (tryingToStop && currentSpeed > 0.05f)
+        // {
+        //     Debug.Log($"Emergency Stop: Speed={currentSpeed:F2}, Throttle={throttleControl:F2}, BrakingForce={currentConfig.decelerationRate * 5.0f:F2}");
         // }
+
 
         if (checkIgnitionPressFlag){
             if (Input.GetKeyDown(KeyCode.JoystickButton10))
@@ -185,7 +308,7 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 checkIgnitionPressFlag = false;
                 ignitionButtonPressNum = 0;
                 CommunicationManager.Instance.SendMessageToServer("driving_frustration_stop");
-                ResetToNormalConfig();
+                ResetToEcoConfig();
             }
         }
 
@@ -199,22 +322,6 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
     }
 
-
-    // private void UpdateSplineBasedOnScenario()
-    // {
-    //     // If no scenarioManager found, skip
-    //     if (scenarioManager == null) return;
-
-    //     // Convert scenario name to lowercase to avoid case-sensitivity issues 
-    //     string scenarioName = scenarioManager.currentScenario.ToLower();
-
-    //     // If scenario name includes "surprise" or "alert", switch to that SplineContainer
-    //     if (scenarioName.Contains("surprise") && scenarioName.Contains("alert"))
-    //     {
-    //         splineContainer = surpriseAlertSplineContainer;
-    //     }
-
-    // }
 
     public void ResetEgoCar()
     {
@@ -276,6 +383,12 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         StartCoroutine(ReenableDrivingAfterReset(wasDriving));
         
         Debug.Log("Ego car reset to original position and state with comprehensive reset.");
+
+        if (configChangeCoroutine != null)
+        {
+            StopCoroutine(configChangeCoroutine);
+        }
+        configChangePending = false;
     }
 
     private IEnumerator ReenableDrivingAfterReset(bool shouldDrive)
@@ -292,95 +405,139 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     {
         
         if (markerActivator.endTrial){
-            currentConfig = stopConfig;
-            configChanged = true;
-            vehicleStopped = true;
-            driveMode = "stop";
+            ScheduleConfigChange(stopConfig, "stop");
+            // ChangeConfigImmediately(stopConfig, "stop");
+            // vehicleStopped = true;
             Debug.Log("End trial marker detected. Changing to stopConfig.");
-            Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+            return;
+        }
+
+        if (scenarioManager.isScenarioReady == false)
+        {
+            ScheduleConfigChange(stopConfig, "stop");
+            // ChangeConfigImmediately(stopConfig, "stop");
+            // vehicleStopped = true;
+            Debug.Log("Simulation Pause Message received. Changing to stopConfig.");
             return;
         }
         
-        
-        
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 5f);
         foreach (var hitCollider in hitColliders)
-        {
+        {   
             if (hitCollider.CompareTag("NormalMarker"))
             {
-                currentConfig = normalConfig;
-                configChanged = true;
-                driveMode = "normal";
-                Debug.Log("Normal marker detected. Changing to normalConfig.");
-                Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+                ScheduleConfigChange(normalConfig, "normal");
+                Debug.Log("Normal marker detected. Scheduling change to normalConfig.");
                 break;
             }
             else if (hitCollider.CompareTag("SportyMarker"))
             {
-                currentConfig = sportyConfig;
-                configChanged = true;
-                driveMode = "sporty";
-                Debug.Log("Sporty marker detected. Changing to sportyConfig.");
-                Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+                ScheduleConfigChange(sportyConfig, "sporty");
+                Debug.Log("Sporty marker detected. Scheduling change to sportyConfig.");
                 break;
             }
             else if (hitCollider.CompareTag("EcoMarker"))
             {
-                currentConfig = ecoConfig;
-                configChanged = true;
-                driveMode = "eco";
-                Debug.Log("Eco marker detected. Changing to ecoConfig.");
-                Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+                ScheduleConfigChange(ecoConfig, "eco");
+                Debug.Log("Eco marker detected. Scheduling change to ecoConfig.");
                 break;
             }
             else if (hitCollider.CompareTag("StopMarker") && !vehicleStopped)
             {
-                currentConfig = stopConfig;
-                configChanged = true;
-                vehicleStopped = true;
-                driveMode = "stop";
+                // For stop markers, still make the change immediate
+                ScheduleConfigChange(stopConfig, "stop");
+                // ChangeConfigImmediately(stopConfig, "stop");
+                // vehicleStopped = true;
                 Debug.Log("Stop marker detected. Changing to stopConfig.");
-                Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
-                // For Debugging
-                // Invoke("ResetToNormalConfig", 10f);
-                checkIgnitionPressFlag = true;
-                ignitionButtonPressNum = 0;
+                // checkIgnitionPressFlag = true;
+                // ignitionButtonPressNum = 0;
 
                 if (hitCollider.name.Contains("Frustration Driving 3")){
-                    // Invoke("ResetToNormalConfig", 40f); // Change back to normal config after 20 seconds
-                    Debug.Log("Frustration Driving 3 marker detected. Changing to stopConfig.");
+                    Debug.Log("Frustration Driving 3 marker detected.");
                     checkIgnitionPressFlag = true;
                     ignitionButtonPressNum = 0;
                 }
-
                 break;
             }
-            // else if (hitCollider.CompareTag("InteractionMarkers") && hitCollider.name.Contains("Frustration Alert 3") && !vehicleStopped)
-            // {
-            //     currentConfig = stopConfig;
-            //     configChanged = true;
-            //     vehicleStopped = true;
-            //     Debug.Log("Frustration Alert 3 marker detected. Changing to stopConfig.");
-            //     Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
-            //     Invoke("ResetToNormalConfig", 20f); // Change back to normal config after 20 seconds
-            //     break;
-            // }
+            else if ((hitCollider.CompareTag("StopSign") || (hitCollider.CompareTag("AdditionalStopSign"))) && !vehicleStopped)
+            {
+                // For stop markers, still make the change immediate
+                // ScheduleConfigChange(stopConfig, "stop");
+                ChangeConfigImmediately(stopConfig, "stop");
+                vehicleStopped = true;
+                Debug.Log("Stop sign detected. Changing to stopConfig.");
+                Invoke("ResetToEcoConfig", stopSignWaitTime);
+                break;
+            }
         }
-
-        // // If stopped. Reset to normal config after 20 seconds.
-        // if (vehicleStopped && startButtonPress && !resetToNormalConfig)
-        // {
-        //     Invoke("ResetToNormalConfig", 10f); // Change back to normal config after 10 seconds
-        //     startButtonPress = false;
-        //     resetToNormalConfig = true;
-        // }
+    }
+    
+    private void ChangeConfigImmediately(SO_AVFollowSplineConfig newConfig, string mode)
+    {
+        // Cancel any pending config changes
+        if (configChangeCoroutine != null)
+        {
+            StopCoroutine(configChangeCoroutine);
+            configChangePending = false;
+        }
+        
+        currentConfig = newConfig;
+        configChanged = true;
+        driveMode = mode;
+        Debug.Log($"Config changed immediately to {mode}. Desired speed: {currentConfig.desiredSpeed}");
     }
 
+    private void ScheduleConfigChange(SO_AVFollowSplineConfig newConfig, string mode)
+    {
+        // If we're already transitioning to this config, don't restart the coroutine
+        if (configChangePending && pendingConfig == newConfig)
+            return;
+            
+        // Cancel any existing pending changes
+        if (configChangeCoroutine != null)
+        {
+            StopCoroutine(configChangeCoroutine);
+        }
+        
+        // Schedule the new change
+        pendingConfig = newConfig;
+        configChangePending = true;
+        configChangeCoroutine = StartCoroutine(DelayedConfigChange(newConfig, mode));
+    }
+
+    private IEnumerator DelayedConfigChange(SO_AVFollowSplineConfig newConfig, string mode)
+    {
+        Debug.Log($"Waiting {configChangeDelay} seconds to change to {mode} config...");
+        yield return new WaitForSeconds(configChangeDelay);
+        
+        currentConfig = newConfig;
+        configChanged = true;
+        driveMode = mode;
+        configChangePending = false;
+        
+        if (mode == "stop")
+        {
+            vehicleStopped = true;
+        }
+
+        Debug.Log($"Config changed to {mode} after delay. Desired speed: {currentConfig.desiredSpeed}");
+    }
+        
     private void ResetToNormalConfig()
     {
         currentConfig = normalConfig;
+        configChanged = true;
         // Debug.Log("Reset to normal config after 20 seconds.");
         Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+    }
+
+    private void ResetToEcoConfig()
+    {
+        currentConfig = ecoConfig;
+        configChanged = true;
+        // Debug.Log("Reset to normal config after 20 seconds.");
+        Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
+        // vehicleStopped = false;
     }
 
     private void checkNButtonPresses()

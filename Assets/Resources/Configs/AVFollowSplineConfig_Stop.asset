@@ -17,7 +17,8 @@ MonoBehaviour:
   Kp_steering: 5
   Ki_steering: 0.2
   Kd_steering: 0.05
-  Kp_speed: 1
+  Kp_speed: 0.25
   Ki_speed: 0.01
   Kd_speed: 0.01
-  decelerationRate: 5
+  decelerationRate: 0.02
+  accelerationRate: 0.5

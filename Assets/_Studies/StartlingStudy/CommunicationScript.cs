@@ -246,6 +246,17 @@ public class CommunicationManager : MonoBehaviour
 
     private ScenarioManagerStartle scenarioManager;
 
+    private NavigationScreenSS navigationScreen;
+
+    private MarkerActivator markerActivator;
+
+    private bool resetButtonPressed = false;
+    private float buttonPressTime = 0f;
+
+    private float trialAlertStartTime = 0f;
+
+    private bool alertTrial = false;
+
     void Awake()
     {
         if (Instance == null)
@@ -263,6 +274,10 @@ public class CommunicationManager : MonoBehaviour
     void Start()
     {
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+
+        navigationScreen = FindObjectOfType<NavigationScreenSS>();
+
+        markerActivator = FindObjectOfType<MarkerActivator>();
 
         // Initialize UDP client for sending
         udpClient = new UdpClient();
@@ -339,13 +354,59 @@ public class CommunicationManager : MonoBehaviour
             }
             receiveEvent.Reset(); // Reset the event after processing
         }
+
+        // Detect button press and store the timestamp
+        // if (Input.GetKeyDown(KeyCode.JoystickButton8))
+        if (Input.GetKeyDown(KeyCode.R))  // For Debugging
+        {
+            resetButtonPressed = true;
+            buttonPressTime = Time.time; // Store time when button is pressed
+            Debug.Log("Confirm Alert button pressed...");
+        }
+
+
+        // Clear Navigation Screen Alert Icon for all alert scenarios except frustration
+        if (scenarioManager.currentScenario == "alert" && resetButtonPressed)
+        { 
+            markerActivator = FindObjectOfType<MarkerActivator>();
+            Debug.Log("Progress in lap for alert: " + markerActivator.markersPassed);
+            // if (scenarioManager.currentStimulus != "frustration" || markerActivator.markersPassed!=3)
+            // {
+                
+            if (navigationScreen.previousIconType.ToString().ToLower().Contains("clear"))
+            {
+                Debug.Log("Navigation screen set to blank due to steering wheel button press");
+                SendMessageToServer("confirm_alert_button_pressed");
+                navigationScreen.ClearAlertButtonPress();
+            }
+            // }
+        }
+
+
+        // Reset buttonPress if more than 2 second has passed
+        if (resetButtonPressed && Time.time - buttonPressTime > 2f)
+        {
+            resetButtonPressed = false;
+            Debug.Log("Clear Alert Button press reset due to timeout.");
+        }
+
+
+        //
+
+        if (alertTrial && Time.time - trialAlertStartTime > 5f)
+        {
+            Debug.Log("Alert trial ended.");
+            alertTrial = false;
+            navigationScreen.SetIconByString("TrialDropoffClear");
+        }
+
     }
 
     // Process received messages
     private void ProcessReceivedMessage(string message)
     {
-        string[] stimuli = { "surprise", "confusion", "frustration" };
-        string[] scenarios = { "alert", "driving" };
+        string[] stimuli = { "surprise", "confusion", "frustration", "trial" };
+        string[] scenarios = { "alert", "driving", "music", "auxiliary" };
 
         foreach (var stim in stimuli)
             if (message.ToLower().Contains(stim))
@@ -365,13 +426,31 @@ public class CommunicationManager : MonoBehaviour
         }
 
         // Listen for Pause simulation message from the server
-        if (message.ToLower().Contains("pause") && message.ToLower().Contains("unity"))
+        if (message.ToLower().Contains("stop") && message.ToLower().Contains("vehicle"))
         {
             Debug.Log("Received pause command from server. Pausing scenario.");
             scenarioManager.isScenarioReady = false;
         }
 
         Debug.Log($"Scenario updated: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
+
+        if (message.ToLower().Contains("listening"))
+        {
+            navigationScreen.SetIconByString("Listening");
+        }
+
+        if (message.ToLower().Contains("standby"))
+        {
+            navigationScreen.SetIconByString("Standby");
+        }
+
+        // For trial alert
+        if (!alertTrial && message.ToLower().Contains("start_alert_trial"))
+        {
+            navigationScreen.SetIconByString("TrialDropoff");
+            trialAlertStartTime = Time.time;
+            alertTrial = true;
+        }
         
     }
 

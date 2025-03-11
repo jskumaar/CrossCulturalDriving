@@ -117,6 +117,8 @@ public class NetworkVehicleController : Interactable_Object {
     }
 
     private void Start() {
+        Debug.Log("Network controller, vehicle mode: " + VehicleMode);
+        
         indicatorStage = 0;
 
         foreach (Renderer tmpRenderer in beamLights) {
@@ -181,6 +183,8 @@ public class NetworkVehicleController : Interactable_Object {
     }
 
     private void TurnOnRight(bool Rightl_) {
+        Debug.Log($"TurnOnRight called with: {Rightl_}");
+
         if (Rightl_) {
             foreach (Transform t in Right) {
                 t.GetComponent<MeshRenderer>().material = IndicatorOn;
@@ -274,11 +278,19 @@ public class NetworkVehicleController : Interactable_Object {
         return m_participantOrder.Value;
     }
 
+    public bool tempLeft, tempRight, tempHonk, tempHighBeam;
+
     void Update() {
+        // Debug.Log("isServer? " + IsServer + "vehicle mode: " + VehicleMode);
+
         if (!IsServer) return;
 
-        if (ConnectionAndSpawning.Singleton.ServerState == ActionState.DRIVE) {
-            bool tempLeft = false, tempRight = false, tempHonk = false, tempHighBeam = false;
+        // Debug.Log("Server state: " + ConnectionAndSpawning.Singleton.ServerState + ". ActionState: " + ActionState.DRIVE);
+
+        // if (ConnectionAndSpawning.Singleton.ServerState == ActionState.DRIVE) {
+            // bool tempLeft = false, tempRight = false, tempHonk = false, tempHighBeam = false;  // currentlu running in autonomous mode but controlling cr from SplineController script, so don't reset here
+
+        if (ConnectionAndSpawning.Singleton.ServerState == ActionState.READY) {
 
             switch (VehicleMode) {
                 case VehicleOpperationMode.KEYBOARD:
@@ -300,11 +312,23 @@ public class NetworkVehicleController : Interactable_Object {
                     break;
                 case VehicleOpperationMode.AUTONOMOUS:
 
+                    // Debug.Log("Running in autonomous mode..");
                     // SteeringInput = _autonomousVehicleDriver.Steering;
                     // ThrottleInput = _autonomousVehicleDriver.Throttle;
                     // tempLeft = _autonomousVehicleDriver.GetLeftIndicatorInput();
                     // tempRight = _autonomousVehicleDriver.GetRightIndicatorInput();
                     // tempHonk = _autonomousVehicleDriver.GetHornInput();
+
+                    // // 03/06/25: Automatically turn on indicators based on steering angle
+                    // float steeringAngle = SteeringInput * -450f;
+                    // if (steeringAngle < -45 && !LeftIsActuallyOn && !RightIsActuallyOn) {
+                    //     // Turning left significantly
+                    //     StartIndicatingLeft();
+                    // }
+                    // else if (steeringAngle > 45 && !LeftIsActuallyOn && !RightIsActuallyOn) {
+                    //     // Turning right significantly
+                    //     StartIndicatingRight();
+                    // }
                     
                     break;
                 case VehicleOpperationMode.REMOTEKEYBOARD:
@@ -331,33 +355,56 @@ public class NetworkVehicleController : Interactable_Object {
                 _steeringAngle - SteeringInput * -450f);
             _steeringAngle = SteeringInput * -450f;
 
-
-            if (NewButtonPress && (tempLeft || tempRight)) {
-                NewButtonPress = false;
-                if (tempLeft && !tempRight) {
-                    toggleBlinking(true, false);
-                    LeftIndicatorDebounce = true;
+            // 03/06/25: Indicators controlled from SplineController script
+            if (VehicleMode == VehicleOpperationMode.AUTONOMOUS) {
+                // Direct control without debounce
+                Debug.Log("Autonomous mode. L: " + tempLeft + " R: " + tempRight + " LIAO: " + LeftIsActuallyOn + " RIAO: " + RightIsActuallyOn);
+                if (tempLeft && !tempRight && !(LeftIsActuallyOn || RightIsActuallyOn)) {
+                    Debug.Log("Left Indicator Toggle....");
+                    StartIndicatingLeft();
+                } 
+                else if (!tempLeft && tempRight  && !(LeftIsActuallyOn || RightIsActuallyOn)) {
+                    Debug.Log("Right Indicator Toggle....");
+                    StartIndicatingRight();
                 }
-
-                else if (tempRight && !tempLeft) {
-                    toggleBlinking(false, true);
-                    RightIndicatorDebounce = true;
+                else if (!tempLeft && !tempRight && (LeftIsActuallyOn || RightIsActuallyOn)) {
+                    Debug.Log("Stop Indicating....");
+                    StopIndicating();
                 }
-                else {
+            }
+            else {
+                // Debug.Log("Not autonomous mode. L: " + tempLeft + " R: " + tempRight);
+                
+                if (NewButtonPress && (tempLeft || tempRight)) {
+                    NewButtonPress = false;
+                    if (tempLeft && !tempRight) {
+                        Debug.Log("Left Indicator Toggle....");
+                        toggleBlinking(true, false);
+                        LeftIndicatorDebounce = true;
+                    }
+
+                    else if (tempRight && !tempLeft) {
+                        Debug.Log("Right Indicator Toggle....");
+                        toggleBlinking(false, true);
+                        RightIndicatorDebounce = true;
+                    }
+                    else {
+                        Debug.Log("Both Indicator Toggle....");
+                        toggleBlinking(true, true);
+                        BothIndicatorDebounce = true;
+                    }
+                }
+                else if (NewButtonPress == false && !BothIndicatorDebounce &&
+                        ((tempLeft && !LeftIndicatorDebounce) || (tempRight && !RightIndicatorDebounce))) {
                     toggleBlinking(true, true);
                     BothIndicatorDebounce = true;
                 }
-            }
-            else if (NewButtonPress == false && !BothIndicatorDebounce &&
-                     ((tempLeft && !LeftIndicatorDebounce) || (tempRight && !RightIndicatorDebounce))) {
-                toggleBlinking(true, true);
-                BothIndicatorDebounce = true;
-            }
-            else if (NewButtonPress == false && !tempLeft && !tempRight) {
-                NewButtonPress = true;
-                LeftIndicatorDebounce = false;
-                RightIndicatorDebounce = false;
-                BothIndicatorDebounce = false;
+                else if (NewButtonPress == false && !tempLeft && !tempRight) {
+                    NewButtonPress = true;
+                    LeftIndicatorDebounce = false;
+                    RightIndicatorDebounce = false;
+                    BothIndicatorDebounce = false;
+                }
             }
 
             UpdateIndicator();
@@ -594,6 +641,7 @@ public class NetworkVehicleController : Interactable_Object {
     }
 
     void UpdateIndicator() {
+        Debug.Log("Indicator stage: " + indicatorStage);
         if (indicatorStage == 1) {
             indicatorStage = 2;
             indicatorTimer = interval;
@@ -603,6 +651,7 @@ public class NetworkVehicleController : Interactable_Object {
             indicatorTimer += Time.deltaTime;
 
             if (indicatorTimer > interval) {
+                Debug.Log($"Timer triggered: ActualLightOn={ActualLightOn}, LeftIsActuallyOn={LeftIsActuallyOn}, RightIsActuallyOn={RightIsActuallyOn}");
                 indicatorTimer = 0;
                 ActualLightOn = !ActualLightOn;
                 if (ActualLightOn) {
@@ -628,6 +677,10 @@ public class NetworkVehicleController : Interactable_Object {
 
                         break;
                     case VehicleOpperationMode.AUTONOMOUS:
+                            // 03/06/25: Enter stage 3 when turning significantly in autonomous mode
+                            if (Mathf.Abs(SteeringInput * -450f) > 90) {
+                                indicatorStage = 3;
+                            }
                         break;
                     case VehicleOpperationMode.REMOTEKEYBOARD:
                         break;
@@ -649,6 +702,10 @@ public class NetworkVehicleController : Interactable_Object {
                         }
                         break;
                     case VehicleOpperationMode.AUTONOMOUS:
+                        // Turn off indicator when steering returns to near-center
+                        if (Mathf.Abs(SteeringInput * -450f) < 10) {
+                            indicatorStage = 4;
+                        }
                         break;
                     case VehicleOpperationMode.REMOTEKEYBOARD:
                         break;
@@ -683,10 +740,13 @@ public class NetworkVehicleController : Interactable_Object {
 
         TurnOnRight(newvalue);
         TurnOnRightClientRpc(newvalue);
+        Debug.Log($"TurnOnRight called with: {newvalue}");
     }
 
     private void LeftIndicatorChanged(bool newvalue) {
         TurnOnLeft(newvalue);
+        Debug.Log($"TurnOnLeft called with: {newvalue}");
+
         TurnOnLeftClientRpc(newvalue);
     }
 
@@ -703,6 +763,7 @@ public class NetworkVehicleController : Interactable_Object {
     }
 
     private void StartIndicatingLeft() {
+        Debug.Log("isServer?" + IsServer);
         if (!IsServer) return;
         LeftIsActuallyOn = true;
         RightIsActuallyOn = false;
@@ -710,6 +771,7 @@ public class NetworkVehicleController : Interactable_Object {
     }
 
     private void StartIndicatingRight() {
+        Debug.Log("isServer?" + IsServer);
         if (!IsServer) return;
         LeftIsActuallyOn = false;
         RightIsActuallyOn = true;
@@ -717,6 +779,7 @@ public class NetworkVehicleController : Interactable_Object {
     }
 
     public void StopIndicating() {
+        Debug.Log("isServer?" + IsServer);
         if (!IsServer) return;
         _StopIndicating();
     }

@@ -135,9 +135,9 @@ public class SC_AVFollowSpline : MonoBehaviour
         initializedClosestT = false;
         lastClosestT = 0f;
 
-        // //Physics states
-        // rb.velocity = Vector3.zero;
-        // rb.angularVelocity = Vector3.zero;
+        //Physics states
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
         
         // Debug.Log($"Car {this.name} reset to original position and state.");
     }

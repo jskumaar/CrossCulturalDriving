@@ -28,6 +28,9 @@ TagManager:
   - RegularTrafficCar
   - StreetCart
   - CrowdAgentCrosswalk
+  - StopSign
+  - AdditionalStopSign
+  - TurnMarker
   layers:
   - Default
   - TransparentFX

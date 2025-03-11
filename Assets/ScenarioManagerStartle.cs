@@ -31,7 +31,8 @@ public class ScenarioManagerStartle : MonoBehaviour
     void Update()
     {
         // Detect button press and store the timestamp
-        if (Input.GetKeyDown(KeyCode.JoystickButton10))
+        // if (Input.GetKeyDown(KeyCode.JoystickButton10))
+        if (Input.GetKeyDown(KeyCode.S))  // For debugging
         {
             buttonPressed = true;
             buttonPressTime = Time.time; // Store time when button is pressed
@@ -45,15 +46,16 @@ public class ScenarioManagerStartle : MonoBehaviour
             CommunicationManager.Instance.SendMessageToServer("ignition_trigger");
             buttonPressed = false; // Reset button press after activation
         }
-        else if (!isScenarioReady)
-        {
-            // Debug.Log("Scenario is not ready yet.");
-            if (isScenarioActive)
-            {
-                Debug.Log("Pausing scenario....");
-            }
-            isScenarioActive = false;
-        }
+        // for resetting the scenario (not used currently)
+        // else if (!isScenarioReady)
+        // {
+        //     // Debug.Log("Scenario is not ready yet.");
+        //     if (isScenarioActive)
+        //     {
+        //         Debug.Log("Pausing scenario....");
+        //     }
+        //     isScenarioActive = false;
+        // }
 
         // Reset buttonPress if more than 2 second has passed
         if (buttonPressed && Time.time - buttonPressTime > 2f)
