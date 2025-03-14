@@ -4,6 +4,7 @@ using System.Collections.Generic;
 public class MarkerActivator : MonoBehaviour
 {
     private ScenarioManagerStartle scenarioManager;
+    private CommunicationManager communicationManager;
     public int markersPassed = 0;
     private int totalMarkers = 5; // Adjust based on the actual number of ProgressMarkers
     private int currentLap = 0;
@@ -13,9 +14,9 @@ public class MarkerActivator : MonoBehaviour
     private Dictionary<string, GameObject> scenarioTrafficCarDictionary = new Dictionary<string, GameObject>();
     private Dictionary<string, GameObject> regularTrafficCarDictionary = new Dictionary<string, GameObject>();
 
-    private EngineSoundController soundController;
+    private TireSoundController soundController;
 
-    private NetworkVehicleController egoCarController;
+    // private EgoVehicleController egoCarController;
 
     
 
@@ -26,31 +27,14 @@ public class MarkerActivator : MonoBehaviour
     void Start()
     {
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+        communicationManager = FindObjectOfType<CommunicationManager>();
         Debug.Log($"[MarkerActivator] ScenarioManager: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
         CacheMarkers();
         CacheScenarioTrafficCars();
         CacheRegularTrafficCars();
-        soundController = FindObjectOfType<EngineSoundController>();
-        egoCarController = FindObjectOfType<NetworkVehicleController>();
+        soundController = FindObjectOfType<TireSoundController>();
     }
 
-    void Update()
-    {
-        // // Check if Scenario is not ready
-        // if (!scenarioManager.isScenarioReady)
-        // {
-        //     // Reset the simulation
-        //     ResetSimulation();
-        //     Debug.Log($"[MarkerActivator] Scenario is not ready. Resetting simulation.");
-        // }
-    }
-
-    // public void updateScenario(string stimulus, string scenario)
-    // {
-    //     scenarioManager.currentStimulus = stimulus;
-    //     scenarioManager.currentScenario = scenario;
-    //     Debug.Log($"[MarkerActivator] Scenario updated to: {stimulus}, {scenario}");
-    // }
 
     // Cache markers for efficient lookups
     private void CacheMarkers()
@@ -63,7 +47,8 @@ public class MarkerActivator : MonoBehaviour
             marker.CompareTag("StopMarker") ||
             marker.CompareTag("NormalMarker") ||
             marker.CompareTag("SportyMarker") ||
-            marker.CompareTag("StopSign")
+            marker.CompareTag("AdditionalStopSign") ||
+            marker.CompareTag("StreetCart") 
         );
         foreach (GameObject marker in allMarkers)
         {
@@ -121,55 +106,29 @@ public class MarkerActivator : MonoBehaviour
 
                 // Check and activate markers for a new scenario
                 scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
-                if (scenarioManager.newScenario)
-                {
+
                     
-                    if ( ((scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "confusion") && (markerNumber >= totalMarkers - 1))   ||
-                        (markerNumber < 1 || (markerNumber >= totalMarkers - 1)) )  // Confusion Alert 1st marker is after Progress Marker 0 and before Progress Marker 1
+                if ( ((scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "confusion") && (markerNumber >= totalMarkers - 1))   ||
+                    (markerNumber < 1 || (markerNumber >= totalMarkers - 1)) )  // Confusion Alert 1st marker is after Progress Marker 0 and before Progress Marker 1
+                {
+                    if (scenarioManager.newScenario)
                     {
-                        ActivateInteractionMarkers();
-                        ActivateScenarioTrafficCars();
-                        ActivateRegularStopMarkers();
-                        ActivatePedestrianManager();
-                        RemoveUnwantedCars();
-
-                        // Activate additional stop signs for music frustration scenario
-                        if (scenarioManager.currentScenario == "music" && scenarioManager.currentStimulus == "frustration")
-                        {
-                            ActivateAdditionalStopMarkers();
-                        }
-                        else
-                        {
-                            DeactivateAdditionalStopMarkers();
-                        }
-
-
-
-                        if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "surprise")
-                        {
-                            ActivateStreetCart();
-                            cartActivated = true;
-                        }
-                        else if (cartActivated)
-                        {
-                            // Deactivate street cart
-                            GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
-                            foreach (GameObject cart in streetCarts)
-                            {
-                                cart.SetActive(false);
-                                Debug.Log($"Deactivated street cart: {cart.name}");
-                            }
-                        }
-
+                        ActivateNewScenario();
                         scenarioManager.newScenario = false; // Reset new scenario flag
+                        Debug.Log($"[MarkerActivator] New scenario activated: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
+                    }
+
+                    else if (Time.time - scenarioManager.newScenarioTime > 250f) // Ensure a minimum time has passed before sending reset message
+                    {
+                        communicationManager.SendMessageToServer("need_to_reset_sim");
                     }
 
                 }
                 
-                // Check if the lap is complete
+                // Check if the lap is complete and reset traffic cars
                 if (markerNumber == totalMarkers)
                 {
-                    CompleteLap();
+                    ResetRegularTrafficCars();
                     if (currentLap > 4){
                         endTrial = true;
                         Debug.Log("End of trial reached.");
@@ -178,45 +137,149 @@ public class MarkerActivator : MonoBehaviour
             }
         }
     
-    
+
         // Play tire screeching sound when car takes sharp turns
         if (other.name.ToLower().Contains("tire") && other.name.ToLower().Contains("screech"))
         {
-            // Debug.Log($"[MarkerActivator] Car took a sharp turn at marker: {other.name}");
+            Debug.Log($"[MarkerActivator] Car took a sharp turn at marker: {other.name}");
             if (soundController != null)
             {
                 soundController.PlayTireScreech();
             }
         }
 
-        //Turn Markers
-        if (other.CompareTag("TurnMarker"))
+        if (other.CompareTag("PedActivate"))
         {
-            Debug.Log($"[MarkerActivator] Car took a turn at marker: {other.name}");
-            if (other.name.ToLower().Contains("left"))
+            // Activate Pedestrian Manager
+            ActivatePedestrianManager();
+            Debug.Log($"[MarkerActivator] Activating pedestrians.");
+        }
+
+
+        // deactivate/reset pedestrians towards end of lap
+        if (other.CompareTag("PedReset"))
+        {
+            if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "frustration")
             {
-                egoCarController.tempLeft = true;
-                egoCarController.tempRight = false;
+                // Deactivate Pedestrian Manager
+                ResetPedestrians();
+                Debug.Log($"[MarkerActivator] Resetting pedestrians.");
             }
-            else if (other.name.ToLower().Contains("right"))
+            else
             {
-                egoCarController.tempRight = true;
-                egoCarController.tempLeft = false;
+                // Reset Pedestrian Manager
+                DeactivatePedestrianManager();
+                Debug.Log($"[MarkerActivator] Deactivating pedestrians.");
             }
         }
 
-        // When any action is completed; set the indicators to false
-        if (other.name.ToLower().Contains("action_end"))
+        // Activate Scenario traffic cars 
+        if (other.CompareTag("InteractionMarkers"))
         {
-            egoCarController.tempRight = false;
-            egoCarController.tempLeft = false;
+            if (other.name.ToLower().Contains("confusion") &&
+                other.name.ToLower().Contains("alert") && other.name.ToLower().Contains("4") && !other.name.ToLower().Contains("end"))
+            {
+                // Activate Scenario traffic cars for confusion alert
+                ActivateScenarioTrafficCars();
+                Debug.Log($"[MarkerActivator] Activating scenario traffic cars.");
+            }
+
+            else if (other.name.ToLower().Contains("surprise") &&
+                other.name.ToLower().Contains("alert") && other.name.ToLower().Contains("2") && !other.name.ToLower().Contains("end"))
+            {
+                // Activate Scenario traffic cars for surprise alert
+                ActivateScenarioTrafficCars();
+                Debug.Log($"[MarkerActivator] Activating scenario traffic cars.");
+            }
+
+            else if (other.name.ToLower().Contains("frustration") &&
+                other.name.ToLower().Contains("alert") && other.name.ToLower().Contains("2") && !other.name.ToLower().Contains("end"))
+            {
+                // Activate Scenario traffic cars for frustration alert
+                ActivateScenarioTrafficCars();
+                Debug.Log($"[MarkerActivator] Activating scenario traffic cars.");
+            }
+            else 
+            {
+                // Deactivate all scenario traffic cars
+                DeactivateAllScenarioTrafficCars();
+                Debug.Log($"[MarkerActivator] Deactivating scenario traffic cars.");
+            }
+
+
+
+            if (other.name.ToLower().Contains("surprise") &&
+                other.name.ToLower().Contains("alert") && other.name.ToLower().Contains("1"))
+            {
+                // Activate pedestrians for surprise alert
+                ActivatePedestrianManager();
+                Debug.Log($"[MarkerActivator] Activating pedestrians.");
+            }
+
+            if (other.name.ToLower().Contains("confusion") &&
+                other.name.ToLower().Contains("alert") && other.name.ToLower().Contains("end") && other.name.ToLower().Contains("1"))
+            {
+                // Activate pedestrians for frustration alert
+                DeactivatePedestrianManager();
+                Debug.Log($"[MarkerActivator] Activating pedestrians.");
+            }
+
+
         }
     
     }
 
-    private void RemoveUnwantedCars()
+
+    private void ActivateNewScenario()
     {
+        ActivateInteractionObjects();
+        RemoveUnwantedCars();
+
+        // Activate pedestrians towards the start of the lap only for confusion alert
+        if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "confusion")
+        {
+            ActivatePedestrianManager();
+            Debug.Log($"[MarkerActivator] Activating pedestrians.");
+        }
+        else
+        {
+            // Deactivate pedestrian manager (if already activated)
+            DeactivatePedestrianManager();
+            Debug.Log($"[MarkerActivator] Deactivating pedestrians.");
+        }
+
+        // // Activate additional stop signs for music frustration scenario
+        // if (scenarioManager.currentScenario == "music" && scenarioManager.currentStimulus == "frustration")
+        // {
+        //     ActivateAdditionalStopMarkers();
+        // }
+        // else
+        // {
+        //     DeactivateAdditionalStopMarkers();
+        // }
+
+
         
+        // if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "surprise")
+        // {
+        //     ActivateStreetCart();
+        //     cartActivated = true;
+        // }
+        // else
+        // {
+        //     // Deactivate street cart
+        //     GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
+        //     foreach (GameObject cart in streetCarts)
+        //     {
+        //         cart.SetActive(false);
+        //         Debug.Log($"Deactivated street cart: {cart.name}");
+        //     }
+        // }
+    }
+
+
+    private void RemoveUnwantedCars()
+    { 
         // For Frustration Driving Scenario, remove the 6th car
         if ((scenarioManager.currentScenario == "driving") && (scenarioManager.currentStimulus == "frustration"))
         {
@@ -240,28 +303,28 @@ public class MarkerActivator : MonoBehaviour
         CrowdAgentManagerMulti[] crowdManagers = FindObjectsOfType<CrowdAgentManagerMulti>();
         foreach (CrowdAgentManagerMulti manager in crowdManagers)
         {
-            if (manager.name.ToLower().Contains(scenarioManager.currentStimulus) &&
-                manager.name.ToLower().Contains(scenarioManager.currentScenario))
-            {
-                manager.gameObject.SetActive(true);
-                Debug.Log($"[MarkerActivator] Activated crowd manager: {manager.name}");
+            // if (manager.name.ToLower().Contains(scenarioManager.currentStimulus) &&
+            //     manager.name.ToLower().Contains(scenarioManager.currentScenario))
+            // {
+            //     manager.gameObject.SetActive(true);
+            //     Debug.Log($"[MarkerActivator] Activated crowd manager: {manager.name}");
 
-                // Deactivate other crowd managers
-                foreach (CrowdAgentManagerMulti otherManager in crowdManagers)
-                {
-                    if (otherManager != manager)
-                    {
-                        otherManager.gameObject.SetActive(false);
-                        Debug.Log($"[MarkerActivator] Deactivated crowd manager: {otherManager.name}");
-                    }
-                }
-                break;
-            }
+            //     // Deactivate other crowd managers
+            //     foreach (CrowdAgentManagerMulti otherManager in crowdManagers)
+            //     {
+            //         if (otherManager != manager)
+            //         {
+            //             otherManager.gameObject.SetActive(false);
+            //             Debug.Log($"[MarkerActivator] Deactivated crowd manager: {otherManager.name}");
+            //         }
+            //     }
+            //     break;
+            // }
 
             // if no manager is found, activate the default manager
             if (manager.name.ToLower().Contains("default"))
             {
-                manager.gameObject.SetActive(true);
+                manager.ActivateAgentSpawn();
                 Debug.Log($"[MarkerActivator] Activated default crowd manager: {manager.name}");
             }
 
@@ -269,7 +332,7 @@ public class MarkerActivator : MonoBehaviour
 
     }
 
-    private void ActivateInteractionMarkers()
+    private void ActivateInteractionObjects()
     {
 
         foreach (var kvp in markerDictionary)
@@ -290,42 +353,42 @@ public class MarkerActivator : MonoBehaviour
         }
     }
 
-    private void ActivateRegularStopMarkers()
-    {
-        foreach (var kvp in markerDictionary)
-        {
-            string markerName = kvp.Key;
-            GameObject marker = kvp.Value;
+    // private void ActivateRegularStopMarkers()
+    // {
+    //     foreach (var kvp in markerDictionary)
+    //     {
+    //         string markerName = kvp.Key;
+    //         GameObject marker = kvp.Value;
 
-            if (marker.CompareTag("StopSign"))
-            {
-                marker.SetActive(true);
-                Debug.Log($"Activated marker: {marker.name}");
-            }
-        }
-    }
+    //         if (marker.CompareTag("StopSign"))
+    //         {
+    //             marker.SetActive(true);
+    //             Debug.Log($"Activated marker: {marker.name}");
+    //         }
+    //     }
+    // }
 
-    private void ActivateAdditionalStopMarkers()
-    {
+    // private void ActivateAdditionalStopMarkers()
+    // {
         
-        GameObject[] stopSignMarkersObjects = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
-        foreach (GameObject stopSignMarker in stopSignMarkersObjects)
-        {
-            stopSignMarker.SetActive(true);
-            Debug.Log($"Activated additional stop marker/object: {stopSignMarker.name}");
-        }
-    }
+    //     GameObject[] stopSignMarkersObjects = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
+    //     foreach (GameObject stopSignMarker in stopSignMarkersObjects)
+    //     {
+    //         stopSignMarker.SetActive(true);
+    //         Debug.Log($"Activated additional stop marker/object: {stopSignMarker.name}");
+    //     }
+    // }
 
-    private void DeactivateAdditionalStopMarkers()
-    {
+    // private void DeactivateAdditionalStopMarkers()
+    // {
         
-        GameObject[] stopSignMarkersObjects = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
-        foreach (GameObject stopSignMarker in stopSignMarkersObjects)
-        {
-            stopSignMarker.SetActive(false);
-            Debug.Log($"Activated additional stop marker/object: {stopSignMarker.name}");
-        }
-    }
+    //     GameObject[] stopSignMarkersObjects = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
+    //     foreach (GameObject stopSignMarker in stopSignMarkersObjects)
+    //     {
+    //         stopSignMarker.SetActive(false);
+    //         Debug.Log($"Activated additional stop marker/object: {stopSignMarker.name}");
+    //     }
+    // }
 
 
     private void ActivateScenarioTrafficCars()
@@ -339,40 +402,49 @@ public class MarkerActivator : MonoBehaviour
                 carName.ToLower().Contains(scenarioManager.currentScenario))
             {
                 car.SetActive(true);
-                // Debug.Log($"Activated traffic car: {car.name}");
-            }
-            else
-            {
-                car.SetActive(false);
+                Debug.Log($"Activated traffic car: {car.name}");
             }
         }
     }
 
 
-    private void ActivateStreetCart()
+    private void DeactivateAllScenarioTrafficCars()
     {
-        // Implement logic to manage traffic cars
-        GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
-
-        Debug.Log($"[MarkerActivator] Found {streetCarts.Length} street carts.");
-
-        foreach (GameObject cart in streetCarts)
+        foreach (var kvp in scenarioTrafficCarDictionary)
         {
-            // Debug.Log($"[MarkerActivator] Checking street cart: {cart.name}, Current Stimulus: {scenarioManager.currentStimulus}, Current Scenario: {scenarioManager.currentScenario}");
-            // Debug.Log($"[MarkerActivator] {cart.name.ToLower().Contains(scenarioManager.currentStimulus)}: {cart.name.ToLower().Contains(scenarioManager.currentScenario)}");
-            // if (cart.name.ToLower().Contains(scenarioManager.currentStimulus) &&
-            //     cart.name.ToLower().Contains(scenarioManager.currentScenario))
-            // {
-            //     cart.SetActive(true);
-            //     Debug.Log($"Activated street cart: {cart.name}");
-            // }
-            // else
-            // {
-            //     cart.SetActive(false);
-            // }
-            cart.SetActive(true);
+            string carName = kvp.Key;
+            GameObject car = kvp.Value;
+            car.SetActive(false);
         }
     }
+
+
+    // private void ActivateStreetCart()
+    // {
+    //     // Implement logic to manage traffic cars
+    //     GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
+
+    //     Debug.Log($"[MarkerActivator] Found {streetCarts.Length} street carts.");
+
+    //     foreach (GameObject cart in streetCarts)
+    //     {
+    //         cart.SetActive(true);
+    //     }
+    // }
+
+
+    // private void DeactivateStreetCart()
+    // {
+    //     // Implement logic to manage traffic cars
+    //     GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
+
+    //     Debug.Log($"[MarkerActivator] Found {streetCarts.Length} street carts.");
+
+    //     foreach (GameObject cart in streetCarts)
+    //     {
+    //         cart.SetActive(false);
+    //     }
+    // }
 
     private void ResetRegularTrafficCars()
     {
@@ -383,13 +455,6 @@ public class MarkerActivator : MonoBehaviour
             
             SC_AVFollowSpline carController = car.GetComponent<SC_AVFollowSpline>();
             carController.ResetCar();
-
-            // car.transform.position = car.GetComponent<SC_AVFollowSpline>().originalPos;
-            // car.transform.rotation = car.GetComponent<SC_AVFollowSpline>().originalRot;
-
-            // car.GetComponent<SC_AVFollowSpline>().vehicleController.SteeringInput = 0f;
-            // car.GetComponent<SC_AVFollowSpline>().vehicleController.ThrottleInput = 0f;
-
         }
         Debug.Log($"[MarkerActivator] Reset regular traffic cars to original positions.");
     }
@@ -408,7 +473,21 @@ public class MarkerActivator : MonoBehaviour
         Debug.Log($"[MarkerActivator] Reset scenario traffic cars to original positions.");
     }
 
-
+    private void DeactivatePedestrianManager()
+    {
+        CrowdAgentManagerMulti[] crowdManagers = FindObjectsOfType<CrowdAgentManagerMulti>();
+        foreach (CrowdAgentManagerMulti manager in crowdManagers)
+        {
+            // if (manager.name.ToLower().Contains(scenarioManager.currentStimulus) &&
+            //     manager.name.ToLower().Contains(scenarioManager.currentScenario))
+            // {
+            //     manager.gameObject.SetActive(false);
+            //     Debug.Log($"[MarkerActivator] Deactivated crowd manager: {manager.name}");
+            // }
+            manager.DeactivateAgentSpawn();
+            Debug.Log($"[MarkerActivator] Deactivated crowd manager: {manager.name}");
+        }
+    }
     private void ResetPedestrians()
     {
         CrowdAgentManagerMulti[] crowdManagers = FindObjectsOfType<CrowdAgentManagerMulti>();
@@ -423,29 +502,30 @@ public class MarkerActivator : MonoBehaviour
     }
 
 
-    private void CompleteLap()
+    // private void CompleteLap()
+    // {
+        
+    //     currentLap++;
+    //     markersPassed = 0;
+    //     passedMarkers.Clear();
+    //     interactionMarkersActivated = false;
+
+    //     // Reset Traffic and pedestrians after each lap
+    //     ResetRegularTrafficCars();
+    //     // ResetScenarioTrafficCars();
+    //     // ResetPedestrians();
+    // }
+
+
+
+    public void ResetSimulation()
     {
         
-        currentLap++;
         markersPassed = 0;
         passedMarkers.Clear();
-        interactionMarkersActivated = false;
-
-        // Reset Traffic and pedestrians after each lap
-        ResetRegularTrafficCars();
-        // ResetScenarioTrafficCars();
-        ResetPedestrians();
-    }
-
-
-
-    private void ResetSimulation()
-    {
+        
         // Reset regular traffic cars
         ResetRegularTrafficCars();
-
-        // // Reset scenario traffic cars
-        // ResetScenarioTrafficCars();
 
         // Reset ego car
         SC_AVFollowSplineEgo egoCar = FindObjectOfType<SC_AVFollowSplineEgo>();
@@ -459,16 +539,11 @@ public class MarkerActivator : MonoBehaviour
             Debug.LogWarning("[MarkerActivator] Could not find ego car to reset!");
         }
 
-        // Reset pedestrians
-        ResetPedestrians();
-
-        // scenarioManager.isScenarioReset = true; // Set the reset flag to true
-
     }
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("InteractionMarkers") || other.CompareTag("EcoMarker") || other.CompareTag("StopMarker") || other.CompareTag("NormalMarker") || other.CompareTag("SportyMarker") || other.CompareTag("AdditionalStopSign"))
+        if (other.CompareTag("InteractionMarkers") || other.CompareTag("EcoMarker") || other.CompareTag("StopMarker") || other.CompareTag("NormalMarker") || other.CompareTag("SportyMarker"))
         {
             // Deactivate the marker
             other.gameObject.SetActive(false);

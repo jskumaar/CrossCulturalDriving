@@ -31,6 +31,8 @@ TagManager:
   - StopSign
   - AdditionalStopSign
   - TurnMarker
+  - PedReset
+  - PedActivate
   layers:
   - Default
   - TransparentFX

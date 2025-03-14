@@ -19,6 +19,7 @@ public class CrowdAgentManagerMulti : MonoBehaviour
     public bool spawnOnStart = false;
     public bool spawnOverTime = true;
     public float spawnRate = 1f;
+    private bool isSpawningActive = false;
 
     // NPC change
     private List<BoxCollider> blockAreas;
@@ -99,7 +100,7 @@ public class CrowdAgentManagerMulti : MonoBehaviour
         }
 
         // Only spawn agents if spawnOnStart is true
-        if (spawnOnStart)
+        if (spawnOnStart && isSpawningActive)
         {
             for (int i = 0; i < initialSpawnCount; i++)
             {
@@ -122,7 +123,10 @@ public class CrowdAgentManagerMulti : MonoBehaviour
         }
 
         // Continuously check and reroute pedestrians
-        CheckAndRerouteAgents();
+        if (isSpawningActive)
+        {
+            CheckAndRerouteAgents();
+        }
     }
 
     public void AgentSetup(Transform parent)
@@ -134,20 +138,26 @@ public class CrowdAgentManagerMulti : MonoBehaviour
         }
 
         // No need to check for BoxCollider here if spawnAreas are already handled in Start()
-        for (int i = 0; i < initialSpawnCount; i++)
+        if (isSpawningActive)
         {
-            RandomSpawn();
-        }
+            for (int i = 0; i < initialSpawnCount; i++)
+            {
+                RandomSpawn();
+            }
 
-        if (spawnOverTime)
-        {
-            InvokeRepeating(nameof(RandomSpawn), spawnRate, spawnRate);
+            if (spawnOverTime)
+            {
+                CancelInvoke(nameof(RandomSpawn));
+                InvokeRepeating(nameof(RandomSpawn), spawnRate, spawnRate);
+            }
         }
     }
 
 
     void RandomSpawn()
     {
+        if (!isSpawningActive) return;
+        
         if (spawnAreas.Count == 0)
         {
             Debug.LogWarning($"No spawn areas available with tag '{spawnAreaTag}' for manager '{gameObject.name}'");
@@ -377,25 +387,88 @@ public class CrowdAgentManagerMulti : MonoBehaviour
     }
 
 
-    // private void CheckAndRerouteAgents()
-    // {
-    //     for (int i = agentInstances.Count - 1; i >= 0; i--)
-    //     {
-    //         GameObject agent = agentInstances[i];
-    //         if (agent == null) continue;
+    public void ActivateAgentSpawn()
+    {
+        if (isSpawningActive) return; // Already active
+        
+        Debug.Log($"Activating agent spawning for {gameObject.name} with tag {spawnAreaTag}");
+        isSpawningActive = true;
+        
+        // Initialize with initial spawn count
+        for (int i = 0; i < initialSpawnCount; i++)
+        {
+            RandomSpawn();
+        }
+        
+        // Start the repeating spawn if needed
+        if (spawnOverTime)
+        {
+            InvokeRepeating(nameof(RandomSpawn), spawnRate, spawnRate);
+        }
+    }
+    
 
-    //         if (agentSpawnAreaMap.TryGetValue(agent, out BoxCollider spawnArea))
-    //         {
-    //             var agentHandler = agent.GetComponent<AgentBoundsHandler>();
-    //             if (agentHandler && agentHandler.IsOutOfBounds(agent.transform.position, spawnArea))
-    //             {
-    //                 Debug.Log($"Agent {agent.name} is out of bounds. Stopping and rerouting...");
-    //                 // reroute to a valid position inside bounds
-    //                 agentHandler.RerouteToValidPosition(spawnArea);
-    //             }
-    //         }
-    //     }
-    // }
+    public void DeactivateAgentSpawn()
+    {
+        if (!isSpawningActive) return; // Already inactive
+        
+        Debug.Log($"Deactivating agent spawning for {gameObject.name} with tag {spawnAreaTag}");
+        isSpawningActive = false;
+        
+        // Cancel any ongoing spawn invoking
+        if (spawnOverTime)
+        {
+            CancelInvoke(nameof(RandomSpawn));
+        }
+        
+        // Remove all existing agents
+        for (int i = agentInstances.Count - 1; i >= 0; i--)
+        {
+            GameObject agent = agentInstances[i];
+            if (agent != null)
+            {
+                // Get the spawn area for proper cleanup
+                if (agentSpawnAreaMap.TryGetValue(agent, out BoxCollider spawnArea))
+                {
+                    // Proper NetworkObject cleanup before destruction
+                    NetworkObject networkObject = agent.GetComponent<NetworkObject>();
+                    if (networkObject != null && networkObject.IsSpawned)
+                    {
+                        networkObject.Despawn();
+                    }
+                    
+                    Destroy(agent);
+                    
+                    // Update counters
+                    if (activeAgentCount.ContainsKey(spawnArea))
+                    {
+                        activeAgentCount[spawnArea]--;
+                    }
+                }
+            }
+        }
+        
+        // Clear all collections
+        agentInstances.Clear();
+        agentSpawnAreaMap.Clear();
+        lastPositions.Clear();
+        stuckCounts.Clear();
+        stuckTimers.Clear();
+        initialPositions.Clear();
+        lastRerouteTimes.Clear();
+        
+        // Reset area counters
+        foreach (BoxCollider area in spawnAreas)
+        {
+            if (area != null)
+            {
+                activeAgentCount[area] = 0;
+            }
+        }
+        
+        Debug.Log($"Deactivation completed for {gameObject.name} with tag {spawnAreaTag}");
+    }
+
 
     private void CheckAndRerouteAgents()
     {

@@ -356,8 +356,8 @@ public class CommunicationManager : MonoBehaviour
         }
 
         // Detect button press and store the timestamp
-        // if (Input.GetKeyDown(KeyCode.JoystickButton8))
-        if (Input.GetKeyDown(KeyCode.R))  // For Debugging
+        if (Input.GetKeyDown(KeyCode.JoystickButton8))
+        // if (Input.GetKeyDown(KeyCode.R))  // For Debugging
         {
             resetButtonPressed = true;
             buttonPressTime = Time.time; // Store time when button is pressed
@@ -416,6 +416,7 @@ public class CommunicationManager : MonoBehaviour
             if (message.ToLower().Contains(scenario))
                 scenarioManager.currentScenario = scenario;
                 scenarioManager.newScenario = true;
+                scenarioManager.newScenarioTime = Time.time;
         
         // Listen for 'Start Unity Simulation' message from the server
         // if (message.ToLower().Contains("start") && message.ToLower().Contains("unity"))
@@ -450,6 +451,13 @@ public class CommunicationManager : MonoBehaviour
             navigationScreen.SetIconByString("TrialDropoff");
             trialAlertStartTime = Time.time;
             alertTrial = true;
+        }
+
+        // For reset cars
+        if (message.ToLower().Contains("reset_sim_now"))
+        {
+            Debug.Log("Received reset cars command from server. Resetting cars.");
+            markerActivator.ResetSimulation();
         }
         
     }

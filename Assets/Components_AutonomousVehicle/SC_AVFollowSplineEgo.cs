@@ -8,11 +8,15 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 {
     public SplineContainer defaultSplineContainer;
     public SplineContainer surpriseAlertSplineContainer;
+    public SplineContainer confusionAlertSplineContainer;
+    public SplineContainer frustrationAlertSplineContainer;
     public SplineContainer confusionDrivingSplineContainer;
     private SplineContainer splineContainer;
 
-    // public SplineContainer splineContainer;
-    public NetworkVehicleController vehicleController; 
+    // Change from EgoVehicleController to NetworkVehicleController for now
+    // We'll reference EgoVehicleController if found, but fallback to NetworkVehicleController
+    public NetworkVehicleController vehicleController;
+
     public SO_AVFollowSplineConfig normalConfig;
     public SO_AVFollowSplineConfig sportyConfig;
     public SO_AVFollowSplineConfig ecoConfig;
@@ -28,7 +32,6 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     public float throttleControl;
     public float currentSpeed;
     
-
     private float steeringIntegral = 0f;
     private float steeringPrevError = 0f;
 
@@ -71,94 +74,200 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
     private bool indicatorLeft, indicatorRight, newButtonPress;  // variables to control indicator lights
 
     private float buttonPressTime = 0f;
+    
+    // Add a flag to check if we've properly initialized
+    private bool isInitialized = false;
 
     void Start()
     {
-        rb = vehicleController.GetComponent<Rigidbody>();
-        originalPos = transform.position;
-        originalRot = transform.rotation;
-        currentConfig = ecoConfig;
-        driveMode = "eco";
-        splineContainer = defaultSplineContainer;
-        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
-
-        markerActivator = FindObjectOfType<MarkerActivator>();
-        newButtonPress = false;
-    }
-
-    private void Update() {
-        
-        // Get updated scenario from ScenarioManager
-        scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
-        if (scenarioManager.newScenario)
+        // Step 1: Initialize vehicle controller
+        if (vehicleController == null)
         {
-            // Debug.Log("New scenario detected. Checking spline container.");
-            if (scenarioManager.currentStimulus == "surprise" && scenarioManager.currentScenario == "alert")
+            // // First try to get our own EgoVehicleController
+            // vehicleController = GetComponent<EgoVehicleController>();
+
+            // if (vehicleController != null)
+            // {
+            //     Debug.Log("EgoVehicleController found on ego car.");
+            // }
+            
+            
+            // If that fails, try our own NetworkVehicleController
+            if (vehicleController == null)
             {
-                splineContainer = surpriseAlertSplineContainer;
-                // Debug.Log("Switching to surpriseAlertSplineContainer.");
+                vehicleController = GetComponent<NetworkVehicleController>();
+                // Debug.Log("NetworkVehicleController found on ego car.");
             }
-            else if (scenarioManager.currentStimulus == "confusion" && scenarioManager.currentScenario == "driving")
+            
+            // If still null, log warning
+            if (vehicleController == null)
             {
-                splineContainer = confusionDrivingSplineContainer;
-                // Debug.Log("Switching to confusionDrivingSplineContainer.");
-            }
-            else
-            {
-                splineContainer = defaultSplineContainer;
-                // Debug.Log("Switching to defaultSplineContainer.");
+                Debug.LogWarning("No vehicle controller found on ego car. Please assign one in the inspector.");
             }
         }
-
         
-        // if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D)) {
-            
-        //     // Ensure car is in original position before toggling driving mode
-        //     transform.position = originalPos;
-        //     transform.rotation = originalRot;
-            
-            
-        //     IsDriving = !IsDriving;
-        //     scenarioManager.isScenarioActive = IsDriving;
-        // }
-
-        // // Detect steering wheel button presses
-        // for (int i = 0; i <= 19; i++)
-        // {
-        //     KeyCode keyCode = (KeyCode)System.Enum.Parse(typeof(KeyCode), "JoystickButton" + i);
-        //     if (Input.GetKeyDown(keyCode))
-        //     {
-        //         Debug.Log($"Logitech Xbox button {keyCode} pressed!");
-        //     }
-        // }
-
-        // // Check if start button is pressed
-        // // KeyCode keyCode2 = (KeyCode)System.Enum.Parse(typeof(KeyCode), "JoystickButton" + 2);
-
-        // // if (Input.GetKeyDown(keyCode))
-        // if (Input.GetKeyDown(KeyCode.JoystickButton2))
-        // {
-        //     startButtonPress = true;
-        //     Debug.Log($"Start button pressed. startButtonPress: {startButtonPress}, resetToNormalConfig: {resetToNormalConfig}, vehicleStopped: {vehicleStopped}");
-        // }
+        // Step 2: Ensure we have a Rigidbody
+        if (vehicleController != null)
+        {
+            rb = vehicleController.GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                Debug.LogWarning("No Rigidbody found on vehicle controller. Adding one.");
+                rb = vehicleController.gameObject.AddComponent<Rigidbody>();
+            }
+        }
+        else
+        {
+            // Get our own Rigidbody as fallback
+            rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                Debug.LogWarning("No Rigidbody found on ego car. Adding one.");
+                rb = gameObject.AddComponent<Rigidbody>();
+            }
+        }
+        
+        // Step 3: Initialize other variables
+        originalPos = transform.position;
+        originalRot = transform.rotation;
+        
+        // Step 4: Initialize configs, use null checks
+        if (ecoConfig != null)
+        {
+            currentConfig = ecoConfig;
+            driveMode = "eco";
+        }
+        else if (normalConfig != null)
+        {
+            currentConfig = normalConfig;
+            driveMode = "normal";
+            Debug.LogWarning("EcoConfig not found, using NormalConfig instead.");
+        }
+        else
+        {
+            Debug.LogError("No config found! Please assign at least one config in the inspector.");
+            // Create a basic config to avoid null references
+            currentConfig = ScriptableObject.CreateInstance<SO_AVFollowSplineConfig>();
+        }
+        
+        // Step 5: Initialize spline container
+        if (defaultSplineContainer != null)
+        {
+            splineContainer = defaultSplineContainer;
+        }
+        else
+        {
+            Debug.LogError("Default spline container is null! Please assign one in the inspector.");
+        }
+        
+        // Step 6: Find ScenarioManager if not already assigned
+        if (scenarioManager == null)
+        {
+            scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
+            if (scenarioManager == null)
+            {
+                Debug.LogError("ScenarioManagerStartle not found in scene!");
+            }
+        }
+        
+        // Step 7: Find MarkerActivator if not already assigned
+        if (markerActivator == null)
+        {
+            markerActivator = FindObjectOfType<MarkerActivator>();
+            if (markerActivator == null)
+            {
+                Debug.LogError("MarkerActivator not found in scene!");
+            }
+        }
+        
+        newButtonPress = false;
+        isInitialized = true;
+        
+        // Debug.Log("SC_AVFollowSplineEgo initialization complete.");
     }
 
-
+    private void Update() 
+    {
+        // Safety check - ensure we're properly initialized
+        if (!isInitialized)
+        {
+            Debug.LogWarning("SC_AVFollowSplineEgo not properly initialized. Trying to initialize again.");
+            Start();
+            return;
+        }
+        
+        // Get updated scenario from ScenarioManager (with null check)
+        if (scenarioManager != null && scenarioManager.newScenario)
+        {
+            Debug.Log("New scenario detected. Checking spline container.");
+            if (scenarioManager.currentStimulus == "surprise" && scenarioManager.currentScenario == "alert" && 
+                surpriseAlertSplineContainer != null)
+            {
+                splineContainer = surpriseAlertSplineContainer;
+                Debug.Log("Switching to surpriseAlertSplineContainer.");
+            }
+            else if (scenarioManager.currentStimulus == "confusion" && scenarioManager.currentScenario == "alert" && 
+                     confusionAlertSplineContainer != null)
+            {
+                splineContainer = confusionAlertSplineContainer;
+                Debug.Log("Switching to confusionAlertSplineContainer.");
+            }
+            else if (scenarioManager.currentStimulus == "frustration" && scenarioManager.currentScenario == "alert" && 
+                     frustrationAlertSplineContainer != null)
+            {
+                splineContainer = frustrationAlertSplineContainer;
+                Debug.Log("Switching to frustrationAlertSplineContainer.");
+            }
+            else if (scenarioManager.currentStimulus == "confusion" && scenarioManager.currentScenario == "driving" && 
+                     confusionDrivingSplineContainer != null)
+            {
+                splineContainer = confusionDrivingSplineContainer;
+                Debug.Log("Switching to confusionDrivingSplineContainer.");
+            }
+            else if (defaultSplineContainer != null)
+            {
+                splineContainer = defaultSplineContainer;
+                Debug.Log("Switching to defaultSplineContainer.");
+            }
+        }
+    }
 
     void FixedUpdate()
     {
         
-        IsDriving = scenarioManager.isScenarioActive;
+        vehicleController = GetComponent<NetworkVehicleController>();
+        
+        // Safety check - ensure we're properly initialized
+        if (!isInitialized || vehicleController == null || rb == null)
+        {
+            Debug.LogWarning("Essential components missing. Skipping FixedUpdate.");
+            return;
+        }
+        
+        // Update driving state from scenario manager (with null check)
+        if (scenarioManager != null)
+        {
+            IsDriving = scenarioManager.isScenarioActive;
+        }
+        else
+        {
+            IsDriving = false;
+        }
 
         indicatorLeft = false;
         indicatorRight = false;
 
-        if (splineContainer == null || splineContainer.Splines.Count == 0 || !IsDriving) {
-            Debug.LogWarning("Spline" + (splineContainer == null ? " is null" : " has no splines. Driving? ") + IsDriving);
+        // Safety check for spline container
+        if (splineContainer == null || splineContainer.Splines.Count == 0 || !IsDriving) 
+        {
             return;
         }
 
-        UpdateConfigBasedOnMarker();
+        // Safely update config based on marker (with null checks)
+        if (markerActivator != null)
+        {
+            UpdateConfigBasedOnMarker();
+        }
 
         var spline = splineContainer.Spline;
         bool isClosedLoop = spline.Closed;
@@ -178,8 +287,8 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         currentSpeed = rb.velocity.magnitude;
         float targetSpeed = currentConfig.desiredSpeed;
 
-        if (configChanged){
-            // Debug.Log($"Current speed: {currentSpeed}, Target speed: {targetSpeed}, Desired speed: , {currentConfig.desiredSpeed}");
+        if (configChanged)
+        {
             configChanged = false;
         }
 
@@ -207,8 +316,6 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 // Reset speed PID to prevent integral windup
                 speedIntegral = 0f;
                 speedPrevError = 0f;
-                
-                // Skip regular PID calculation for throttle when in emergency stop mode
             }
             else if (currentSpeed <= 0.1f)
             {
@@ -253,31 +360,27 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         if (steeringControl > 0.1f)
         {
             indicatorRight = true;
-            // Debug.Log($"Heading error: {_headingError}, Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
-
         }
         else if (steeringControl < -0.1f)
         {
             indicatorLeft = true;
-            // Debug.Log($"Heading error: {_headingError}, Steering: {steeringControl}, Throttle: {throttleControl}, Speed: {currentSpeed}, Target Speed: {targetSpeed}");
         }
-
 
         // Apply the calculated controls to the vehicle
         vehicleController.SteeringInput = steeringControl;
         vehicleController.ThrottleInput = throttleControl;
-        // vehicleController.tempLeft = indicatorLeft;
-        // vehicleController.tempRight = indicatorRight;
+        
+        // Debug.Log($"New Button Press: {newButtonPress}, Indicator Left: {indicatorLeft}, Indicator Right: {indicatorRight}, vehicleController.tempLeft: {vehicleController.tempLeft}, vehicleController.tempRight: {vehicleController.tempRight}");
 
-        // check if indicator is active and if indicatorLeft or indicatorRight is still true or false after 5 seconds (enough time to start making a turn?)
+        // Handle the indicator stop logic
         if ((!newButtonPress) && (vehicleController.tempLeft || vehicleController.tempRight))
         {
             newButtonPress = true;
             buttonPressTime = Time.time;
-            Debug.Log("Indicator active.");
+            // Debug.Log("Indicator active.");
         }
         
-        if (newButtonPress && Time.time - buttonPressTime > 5f)
+        if (newButtonPress && Time.time - buttonPressTime > 7f)
         {
             vehicleController.tempLeft = indicatorLeft;
             vehicleController.tempRight = indicatorRight;
@@ -285,138 +388,58 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
             if (!indicatorLeft && !indicatorRight)
             {
                 newButtonPress = false;
-                Debug.Log("Indicator off.");
+                // Debug.Log("Indicator off.");
             }
         }
+        
 
-        // // Add debug logging when in stopping mode
-        // if (tryingToStop && currentSpeed > 0.05f)
-        // {
-        //     Debug.Log($"Emergency Stop: Speed={currentSpeed:F2}, Throttle={throttleControl:F2}, BrakingForce={currentConfig.decelerationRate * 5.0f:F2}");
-        // }
-
-
+        // Handle ignition button presses if needed
         if (checkIgnitionPressFlag){
             if (Input.GetKeyDown(KeyCode.JoystickButton10))
             {
                 ignitionButtonPressNum++;
                 Debug.Log("Ignition button press count: " + ignitionButtonPressNum);
             }
-
             
             if (ignitionButtonPressNum > 20){
                 checkIgnitionPressFlag = false;
                 ignitionButtonPressNum = 0;
-                CommunicationManager.Instance.SendMessageToServer("driving_frustration_stop");
+                
+                // Check if CommunicationManager exists
+                if (CommunicationManager.Instance != null)
+                {
+                    CommunicationManager.Instance.SendMessageToServer("driving_frustration_stop");
+                }
                 ResetToEcoConfig();
             }
         }
 
-
         // Deactivate Scenario if trial ended and vehicle has stopped
-        if (markerActivator.endTrial && currentSpeed < 0.1f)
+        if (markerActivator != null && markerActivator.endTrial && currentSpeed < 0.1f && scenarioManager != null)
         {
             scenarioManager.isScenarioActive = false;
             Debug.Log("Vehicle stopped. Deactivating scenario.");
         }
-
-    }
-
-
-    public void ResetEgoCar()
-    {
-        // First, temporarily disable the FixedUpdate logic to prevent any position calculations
-        bool wasDriving = IsDriving;
-        IsDriving = false;
-        
-        // Reset position and rotation to original values
-        transform.position = originalPos;
-        transform.rotation = originalRot;
-        
-        // Reset vehicle controller parameters
-        currentSpeed = 0f;
-        throttleControl = 0f;
-        steeringControl = 0f;
-        vehicleController.ThrottleInput = 0f;
-        vehicleController.SteeringInput = 0f;
-        
-        // Reset PID controllers
-        steeringIntegral = 0f;
-        steeringPrevError = 0f;
-        speedIntegral = 0f;
-        speedPrevError = 0f;
-
-        // Completely reset spline following states
-        _closestT = 0f;
-        _closestPoint = originalPos; // Use a valid position instead of zero
-        _lookT = 0f;
-        _lookPoint = originalPos + transform.forward * 10f; // Look ahead in current direction
-        _toTarget = transform.forward; // Default to current forward
-        _headingError = 0f;
-        
-        // Force recalculation of spline positioning
-        initializedClosestT = false;
-        lastClosestT = 0f;
-        
-        // Reset behavior flags
-        vehicleStopped = false;
-        resetToNormalConfig = false;
-        configChanged = false;
-        checkIgnitionPressFlag = false;
-        ignitionButtonPressNum = 0;
-        
-        // Reset physics state
-        if (rb != null)
-        {
-            rb.velocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            // Also reset any forces and torques
-            rb.ResetCenterOfMass();
-            rb.ResetInertiaTensor();
-        }
-        
-        // Set to default configuration
-        currentConfig = ecoConfig;
-        driveMode = "eco";
-        
-        // Wait one frame before allowing driving again
-        StartCoroutine(ReenableDrivingAfterReset(wasDriving));
-        
-        Debug.Log("Ego car reset to original position and state with comprehensive reset.");
-
-        if (configChangeCoroutine != null)
-        {
-            StopCoroutine(configChangeCoroutine);
-        }
-        configChangePending = false;
-    }
-
-    private IEnumerator ReenableDrivingAfterReset(bool shouldDrive)
-    {
-        // Wait for two physics updates to ensure everything is settled
-        yield return new WaitForFixedUpdate();
-        yield return new WaitForFixedUpdate();
-        
-        // After waiting, if we should be driving, reenable it
-        IsDriving = shouldDrive;
     }
 
     private void UpdateConfigBasedOnMarker()
     {
+        // Safety checks
+        if (markerActivator == null || scenarioManager == null)
+        {
+            Debug.LogWarning("MarkerActivator or ScenarioManager is null in UpdateConfigBasedMarker");
+            return;
+        }
         
-        if (markerActivator.endTrial){
+        if (markerActivator.endTrial && stopConfig != null){
             ScheduleConfigChange(stopConfig, "stop");
-            // ChangeConfigImmediately(stopConfig, "stop");
-            // vehicleStopped = true;
             Debug.Log("End trial marker detected. Changing to stopConfig.");
             return;
         }
 
-        if (scenarioManager.isScenarioReady == false)
+        if (scenarioManager.isScenarioReady == false && stopConfig != null)
         {
             ScheduleConfigChange(stopConfig, "stop");
-            // ChangeConfigImmediately(stopConfig, "stop");
-            // vehicleStopped = true;
             Debug.Log("Simulation Pause Message received. Changing to stopConfig.");
             return;
         }
@@ -424,33 +447,30 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 5f);
         foreach (var hitCollider in hitColliders)
         {   
-            if (hitCollider.CompareTag("NormalMarker"))
+            if (hitCollider == null) continue;
+            
+            if (hitCollider.CompareTag("NormalMarker") && normalConfig != null)
             {
                 ScheduleConfigChange(normalConfig, "normal");
                 Debug.Log("Normal marker detected. Scheduling change to normalConfig.");
                 break;
             }
-            else if (hitCollider.CompareTag("SportyMarker"))
+            else if (hitCollider.CompareTag("SportyMarker") && sportyConfig != null)
             {
                 ScheduleConfigChange(sportyConfig, "sporty");
                 Debug.Log("Sporty marker detected. Scheduling change to sportyConfig.");
                 break;
             }
-            else if (hitCollider.CompareTag("EcoMarker"))
+            else if (hitCollider.CompareTag("EcoMarker") && ecoConfig != null)
             {
                 ScheduleConfigChange(ecoConfig, "eco");
                 Debug.Log("Eco marker detected. Scheduling change to ecoConfig.");
                 break;
             }
-            else if (hitCollider.CompareTag("StopMarker") && !vehicleStopped)
+            else if (hitCollider.CompareTag("StopMarker") && !vehicleStopped && stopConfig != null)
             {
-                // For stop markers, still make the change immediate
                 ScheduleConfigChange(stopConfig, "stop");
-                // ChangeConfigImmediately(stopConfig, "stop");
-                // vehicleStopped = true;
                 Debug.Log("Stop marker detected. Changing to stopConfig.");
-                // checkIgnitionPressFlag = true;
-                // ignitionButtonPressNum = 0;
 
                 if (hitCollider.name.Contains("Frustration Driving 3")){
                     Debug.Log("Frustration Driving 3 marker detected.");
@@ -459,10 +479,9 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                 }
                 break;
             }
-            else if ((hitCollider.CompareTag("StopSign") || (hitCollider.CompareTag("AdditionalStopSign"))) && !vehicleStopped)
+            else if ((hitCollider.CompareTag("StopSign") || (hitCollider.CompareTag("AdditionalStopSign"))) 
+                    && !vehicleStopped && stopConfig != null)
             {
-                // For stop markers, still make the change immediate
-                // ScheduleConfigChange(stopConfig, "stop");
                 ChangeConfigImmediately(stopConfig, "stop");
                 vehicleStopped = true;
                 Debug.Log("Stop sign detected. Changing to stopConfig.");
@@ -472,8 +491,15 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         }
     }
     
+    // The rest of your methods remain mostly unchanged, but I've added some safety checks
+    
     private void ChangeConfigImmediately(SO_AVFollowSplineConfig newConfig, string mode)
     {
+        if (newConfig == null) {
+            Debug.LogError($"Attempted to change to null config: {mode}");
+            return;
+        }
+        
         // Cancel any pending config changes
         if (configChangeCoroutine != null)
         {
@@ -489,6 +515,11 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
     private void ScheduleConfigChange(SO_AVFollowSplineConfig newConfig, string mode)
     {
+        if (newConfig == null) {
+            Debug.LogError($"Attempted to schedule null config: {mode}");
+            return;
+        }
+        
         // If we're already transitioning to this config, don't restart the coroutine
         if (configChangePending && pendingConfig == newConfig)
             return;
@@ -510,6 +541,11 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         Debug.Log($"Waiting {configChangeDelay} seconds to change to {mode} config...");
         yield return new WaitForSeconds(configChangeDelay);
         
+        if (newConfig == null) {
+            Debug.LogError($"Config became null during delay: {mode}");
+            yield break;
+        }
+        
         currentConfig = newConfig;
         configChanged = true;
         driveMode = mode;
@@ -525,31 +561,32 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         
     private void ResetToNormalConfig()
     {
+        if (normalConfig == null) {
+            Debug.LogError("Attempted to reset to null normalConfig");
+            return;
+        }
+        
         currentConfig = normalConfig;
         configChanged = true;
-        // Debug.Log("Reset to normal config after 20 seconds.");
         Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
     }
 
     private void ResetToEcoConfig()
     {
+        if (ecoConfig == null) {
+            Debug.LogError("Attempted to reset to null ecoConfig");
+            return;
+        }
+        
         currentConfig = ecoConfig;
         configChanged = true;
-        // Debug.Log("Reset to normal config after 20 seconds.");
         Debug.Log("Desired speed: " + currentConfig.desiredSpeed);
-        // vehicleStopped = false;
     }
 
-    private void checkNButtonPresses()
-    {
-        if (Input.GetKeyDown(KeyCode.JoystickButton10))
-        {
-            Debug.Log("Ignition button pressed.");
-            checkIgnitionPressFlag = false;
-        }
-    }
-
-
+    // The rest of your methods (PIDControl, FindClosestTOnSpline, etc.) remain the same
+    // Omitted for brevity
+    
+    // Rest of your methods would go here...
     private float PIDControl(float error, ref float integral, ref float prevError, float Kp, float Ki, float Kd)
     {
         float dt = Time.fixedDeltaTime;
@@ -592,7 +629,6 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
                     closestDist = dist;
                     closestT = t;
                 }
-
             }
 
             lastClosestT = closestT;
@@ -640,7 +676,92 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
 
         return t;
     }
+    
+    public void ResetEgoCar()
+    {
+        // First, temporarily disable the FixedUpdate logic to prevent any position calculations
+        bool wasDriving = IsDriving;
+        IsDriving = false;
+        
+        // Reset position and rotation to original values
+        transform.position = originalPos;
+        transform.rotation = originalRot;
+        
+        // Reset vehicle controller parameters
+        currentSpeed = 0f;
+        throttleControl = 0f;
+        steeringControl = 0f;
+        
+        if (vehicleController != null)
+        {
+            vehicleController.ThrottleInput = 0f;
+            vehicleController.SteeringInput = 0f;
+        }
+        
+        // Reset PID controllers
+        steeringIntegral = 0f;
+        steeringPrevError = 0f;
+        speedIntegral = 0f;
+        speedPrevError = 0f;
 
+        // Completely reset spline following states
+        _closestT = 0f;
+        _closestPoint = originalPos; // Use a valid position instead of zero
+        _lookT = 0f;
+        _lookPoint = originalPos + transform.forward * 10f; // Look ahead in current direction
+        _toTarget = transform.forward; // Default to current forward
+        _headingError = 0f;
+        
+        // Force recalculation of spline positioning
+        initializedClosestT = false;
+        lastClosestT = 0f;
+        
+        // Reset behavior flags
+        vehicleStopped = false;
+        resetToNormalConfig = false;
+        configChanged = false;
+        checkIgnitionPressFlag = false;
+        ignitionButtonPressNum = 0;
+        
+        // Reset physics state
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            // Also reset any forces and torques
+            rb.ResetCenterOfMass();
+            rb.ResetInertiaTensor();
+        }
+        
+        // Set to default configuration
+        if (ecoConfig != null)
+        {
+            currentConfig = ecoConfig;
+            driveMode = "eco";
+        }
+        
+        // Wait one frame before allowing driving again
+        StartCoroutine(ReenableDrivingAfterReset(wasDriving));
+        
+        Debug.Log("Ego car reset to original position and state with comprehensive reset.");
+
+        if (configChangeCoroutine != null)
+        {
+            StopCoroutine(configChangeCoroutine);
+        }
+        configChangePending = false;
+    }
+
+    private IEnumerator ReenableDrivingAfterReset(bool shouldDrive)
+    {
+        // Wait for two physics updates to ensure everything is settled
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        
+        // After waiting, if we should be driving, reenable it
+        IsDriving = shouldDrive;
+    }
+    
     private void OnDrawGizmos() 
     {
         if (splineContainer != null && splineContainer.Spline != null && IsDriving) 
@@ -657,4 +778,4 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
             Gizmos.DrawLine(transform.position, transform.position + errorVector * 5f);
         }
     }
-} 
+}
