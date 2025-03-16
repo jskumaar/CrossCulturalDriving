@@ -369,7 +369,7 @@ public class CommunicationManager : MonoBehaviour
         if (scenarioManager.currentScenario == "alert" && resetButtonPressed)
         { 
             markerActivator = FindObjectOfType<MarkerActivator>();
-            Debug.Log("Progress in lap for alert: " + markerActivator.markersPassed);
+            Debug.Log("Progress in lap for alert: " + markerActivator.N_markersPassed);
             // if (scenarioManager.currentStimulus != "frustration" || markerActivator.markersPassed!=3)
             // {
                 
@@ -397,7 +397,7 @@ public class CommunicationManager : MonoBehaviour
         {
             Debug.Log("Alert trial ended.");
             alertTrial = false;
-            navigationScreen.SetIconByString("TrialDropoffClear");
+            navigationScreen.SetIconByString("TrialBatteryClear");
         }
 
     }
@@ -433,7 +433,11 @@ public class CommunicationManager : MonoBehaviour
             scenarioManager.isScenarioReady = false;
         }
 
-        Debug.Log($"Scenario updated: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
+        if (scenarioManager.newScenario)
+        {
+            Debug.Log($"Scenario updated: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
+        }
+       
 
         if (message.ToLower().Contains("listening"))
         {
@@ -448,7 +452,7 @@ public class CommunicationManager : MonoBehaviour
         // For trial alert
         if (!alertTrial && message.ToLower().Contains("start_alert_trial"))
         {
-            navigationScreen.SetIconByString("TrialDropoff");
+            navigationScreen.SetIconByString("TrialBattery");
             trialAlertStartTime = Time.time;
             alertTrial = true;
         }
@@ -458,6 +462,9 @@ public class CommunicationManager : MonoBehaviour
         {
             Debug.Log("Received reset cars command from server. Resetting cars.");
             markerActivator.ResetSimulation();
+            scenarioManager.newScenario = true;
+            scenarioManager.newScenarioTime = Time.time;
+            Debug.Log($"Scenario reset: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
         }
         
     }

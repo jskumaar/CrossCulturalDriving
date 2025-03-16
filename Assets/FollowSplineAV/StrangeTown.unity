@@ -1371,7 +1371,7 @@ Transform:
   m_GameObject: {fileID: 184457584}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -240.1, y: 0, z: 114.5}
+  m_LocalPosition: {x: -240.1, y: 0, z: 118.23}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -13212,11 +13212,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 495970, guid: 76bfb64261b6b4eb080dcd0e2fa84572, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 4.5
+      value: 5.46
       objectReference: {fileID: 0}
     - target: {fileID: 495970, guid: 76bfb64261b6b4eb080dcd0e2fa84572, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 38
+      value: 34.48
       objectReference: {fileID: 0}
     - target: {fileID: 495970, guid: 76bfb64261b6b4eb080dcd0e2fa84572, type: 3}
       propertyPath: m_LocalRotation.w
@@ -13574,8 +13574,8 @@ MonoBehaviour:
   replayObject:
     reference: {fileID: 1098682133}
   recordingIconType: 0
-  vagueIconImage: {fileID: 21300000, guid: 5b8d530319a878444bf3d811f6e0d632, type: 3}
-  vagueIconClearImage: {fileID: 21300000, guid: 814f04f722f0d2e41b511a32092dff9c, type: 3}
+  vagueIconImage: {fileID: 21300000, guid: e1d59635d4932e24bbe290f8a2ce4d83, type: 3}
+  vagueIconClearImage: {fileID: 21300000, guid: a3c22265b6157df44bca7f9001cb4d08, type: 3}
   pedestrianImage: {fileID: 21300000, guid: 07ee42aa6a3c92349ba096c789422525, type: 3}
   pedestrianClearImage: {fileID: 21300000, guid: 79a2fa1684768b647ba88ed5c335ddfd, type: 3}
   warningIconImage: {fileID: 21300000, guid: 00dc4557164383b46941f62cf0e200e8, type: 3}
@@ -13593,10 +13593,12 @@ MonoBehaviour:
   microphoneImage: {fileID: 21300000, guid: d6f33a277ebbae84098ae7d95e38d951, type: 3}
   dropoffImage: {fileID: 21300000, guid: 84938c7ce2458dc4a8fc8f2d799048f4, type: 3}
   dropoffClearImage: {fileID: 21300000, guid: da09ebb8696344448a2b8facc92d9311, type: 3}
+  batteryImage: {fileID: 21300000, guid: a44825bdc0daf554ba296cbe3bd0012a, type: 3}
+  batteryClearImage: {fileID: 21300000, guid: ce7c27c0cf4bc364c95a0f7ec0b707d5, type: 3}
   blankScreen: {fileID: 21300000, guid: e5ee130e9642c7741a67a0cc80730e6a, type: 3}
   gpsImagePlane: {fileID: 1805868289}
-  defaultIconType: 19
-  previousIconType: 19
+  defaultIconType: 21
+  previousIconType: 21
 --- !u!114 &1098682136
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13609,7 +13611,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd09a3f2bcafc654abb9055413ddc22e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  markersPassed: 0
+  N_markersPassed: 0
   endTrial: 0
   cartActivated: 0
 --- !u!114 &1098682137

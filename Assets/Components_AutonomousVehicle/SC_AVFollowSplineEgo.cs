@@ -199,35 +199,35 @@ public class SC_AVFollowSplineEgo : MonoBehaviour
         // Get updated scenario from ScenarioManager (with null check)
         if (scenarioManager != null && scenarioManager.newScenario)
         {
-            Debug.Log("New scenario detected. Checking spline container.");
+            // Debug.Log("New scenario detected. Checking spline container.");
             if (scenarioManager.currentStimulus == "surprise" && scenarioManager.currentScenario == "alert" && 
                 surpriseAlertSplineContainer != null)
             {
                 splineContainer = surpriseAlertSplineContainer;
-                Debug.Log("Switching to surpriseAlertSplineContainer.");
+                // Debug.Log("Switching to surpriseAlertSplineContainer.");
             }
             else if (scenarioManager.currentStimulus == "confusion" && scenarioManager.currentScenario == "alert" && 
                      confusionAlertSplineContainer != null)
             {
                 splineContainer = confusionAlertSplineContainer;
-                Debug.Log("Switching to confusionAlertSplineContainer.");
+                // Debug.Log("Switching to confusionAlertSplineContainer.");
             }
             else if (scenarioManager.currentStimulus == "frustration" && scenarioManager.currentScenario == "alert" && 
                      frustrationAlertSplineContainer != null)
             {
                 splineContainer = frustrationAlertSplineContainer;
-                Debug.Log("Switching to frustrationAlertSplineContainer.");
+                // Debug.Log("Switching to frustrationAlertSplineContainer.");
             }
             else if (scenarioManager.currentStimulus == "confusion" && scenarioManager.currentScenario == "driving" && 
                      confusionDrivingSplineContainer != null)
             {
                 splineContainer = confusionDrivingSplineContainer;
-                Debug.Log("Switching to confusionDrivingSplineContainer.");
+                // Debug.Log("Switching to confusionDrivingSplineContainer.");
             }
             else if (defaultSplineContainer != null)
             {
                 splineContainer = defaultSplineContainer;
-                Debug.Log("Switching to defaultSplineContainer.");
+                // Debug.Log("Switching to defaultSplineContainer.");
             }
         }
     }

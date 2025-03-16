@@ -26,13 +26,17 @@ public class NavigationScreenSS : ReplayBehaviour
         gradientClear,
         dropoff,
         dropoffClear,
+        battery,
+        batteryClear,
         microphone,
         blankScreen  // Ensure this is the default until a trigger is hit
     }
 
     [ReplayVar(false)] public int recordingIconType = (int)IconType.blankScreen;
 
-    public Sprite vagueIconImage, vagueIconClearImage, pedestrianImage, pedestrianClearImage, warningIconImage, warningClearImage, stopIconImage, carImage, carClearImage, straightImage, leftImage, leftClearImage, rightImage, rightClearImage, gradientImage, gradientClearImage, microphoneImage, dropoffImage, dropoffClearImage, blankScreen;
+    public Sprite vagueIconImage, vagueIconClearImage, pedestrianImage, pedestrianClearImage, warningIconImage, warningClearImage, stopIconImage, carImage, carClearImage, 
+            straightImage, leftImage, leftClearImage, rightImage, rightClearImage, gradientImage, gradientClearImage, microphoneImage, dropoffImage, dropoffClearImage, 
+            batteryImage, batteryClearImage, blankScreen;
     public Image gpsImagePlane;
     public IconType defaultIconType;
     private AudioSource GpsAudioPlayer;
@@ -46,9 +50,11 @@ public class NavigationScreenSS : ReplayBehaviour
         { "Standby", IconType.blankScreen},
         { "TrialDropoff", IconType.dropoff},
         { "TrialDropoffClear", IconType.dropoffClear},
+        { "TrialBattery", IconType.battery},
+        { "TrialBatteryClear", IconType.batteryClear},
         { "confusion_alert_trigger_1", IconType.pedestrian },
         { "confusion_alert_trigger_2", IconType.Left },
-        { "confusion_alert_trigger_3", IconType.warning },
+        { "confusion_alert_trigger_3", IconType.vagueIcon },
         { "confusion_alert_trigger_4", IconType.car },
         { "surprise_alert_trigger_1", IconType.pedestrian },
         { "surprise_alert_trigger_2", IconType.car },
@@ -60,7 +66,7 @@ public class NavigationScreenSS : ReplayBehaviour
         { "frustration_alert_trigger_4", IconType.pedestrian },
         { "confusion_alert_trigger_1_action_end", IconType.pedestrianClear },
         { "confusion_alert_trigger_2_action_end", IconType.LeftClear },
-        { "confusion_alert_trigger_3_action_end", IconType.warningClear },
+        { "confusion_alert_trigger_3_action_end", IconType.vagueIconClear },
         { "confusion_alert_trigger_4_action_end", IconType.carClear },
         { "surprise_alert_trigger_1_action_end", IconType.pedestrianClear },
         { "surprise_alert_trigger_2_action_end", IconType.carClear },
@@ -151,10 +157,14 @@ public class NavigationScreenSS : ReplayBehaviour
                 return carClearImage;
             case IconType.gradientClear:
                 return gradientClearImage;
-            case IconType.dropoff:
-                return dropoffImage;
-            case IconType.dropoffClear:
-                return dropoffClearImage;
+            // case IconType.dropoff:
+            //     return dropoffImage;
+            // case IconType.dropoffClear:
+            //     return dropoffClearImage;
+            case IconType.battery:
+                return batteryImage;
+            case IconType.batteryClear:
+                return batteryClearImage;
             case IconType.blankScreen:
                 return blankScreen;
             default:

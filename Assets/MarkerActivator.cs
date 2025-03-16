@@ -5,7 +5,7 @@ public class MarkerActivator : MonoBehaviour
 {
     private ScenarioManagerStartle scenarioManager;
     private CommunicationManager communicationManager;
-    public int markersPassed = 0;
+    public int N_markersPassed = 0;
     private int totalMarkers = 5; // Adjust based on the actual number of ProgressMarkers
     private int currentLap = 0;
     private HashSet<int> passedMarkers = new HashSet<int>();
@@ -14,11 +14,16 @@ public class MarkerActivator : MonoBehaviour
     private Dictionary<string, GameObject> scenarioTrafficCarDictionary = new Dictionary<string, GameObject>();
     private Dictionary<string, GameObject> regularTrafficCarDictionary = new Dictionary<string, GameObject>();
 
+    private Dictionary<string, GameObject> scenarioStreetCarts = new Dictionary<string, GameObject>();
+
+    private Dictionary<string, GameObject> scenarioAddStopSigns = new Dictionary<string, GameObject>();
+    private Dictionary<string, string> markerTags = new Dictionary<string, string>();
+
     private TireSoundController soundController;
 
     // private EgoVehicleController egoCarController;
 
-    
+    private bool intersectionSceneObjectsCached = false; // Flag to indicate if street bins have been cached
 
     public bool endTrial = false; // Flag to indicate if the trial should end
 
@@ -29,7 +34,7 @@ public class MarkerActivator : MonoBehaviour
         scenarioManager = FindObjectOfType<ScenarioManagerStartle>();
         communicationManager = FindObjectOfType<CommunicationManager>();
         Debug.Log($"[MarkerActivator] ScenarioManager: {scenarioManager.currentStimulus}, {scenarioManager.currentScenario}");
-        CacheMarkers();
+        CacheMarkersAndDeactivate();
         CacheScenarioTrafficCars();
         CacheRegularTrafficCars();
         soundController = FindObjectOfType<TireSoundController>();
@@ -37,22 +42,22 @@ public class MarkerActivator : MonoBehaviour
 
 
     // Cache markers for efficient lookups
-    private void CacheMarkers()
+    private void CacheMarkersAndDeactivate()
     {
         // GameObject[] allMarkers = GameObject.FindGameObjectsWithTag("InteractionMarkers");
         GameObject[] allMarkers = GameObject.FindObjectsOfType<GameObject>();
+        Debug.Log($"[MarkerActivator] Found {allMarkers.Length} markers in the scene.");
         allMarkers = System.Array.FindAll(allMarkers, marker => 
             marker.CompareTag("InteractionMarkers") ||
             marker.CompareTag("EcoMarker") ||
             marker.CompareTag("StopMarker") ||
             marker.CompareTag("NormalMarker") ||
-            marker.CompareTag("SportyMarker") ||
-            marker.CompareTag("AdditionalStopSign") ||
-            marker.CompareTag("StreetCart") 
+            marker.CompareTag("SportyMarker")
         );
         foreach (GameObject marker in allMarkers)
         {
             markerDictionary[marker.name.ToLower()] = marker;
+            markerTags[marker.name.ToLower()] = marker.tag;
             marker.SetActive(false);
         }
         Debug.Log($"[MarkerActivator] Cached {markerDictionary.Count} markers.");
@@ -60,6 +65,17 @@ public class MarkerActivator : MonoBehaviour
         // Log all marker keys to verify AdditionalStopSign objects are cached
         string markerKeys = string.Join(", ", markerDictionary.Keys);
         Debug.Log($"[MarkerActivator] Cached markers: {markerKeys}");
+        Debug.Log($"[MarkerActivator] Cached marker tags: {string.Join(", ", markerTags.Values)}");
+
+
+        // Deactivate all cached markers
+        foreach (var kvp in markerDictionary)
+        {
+            string markerName = kvp.Key;
+            GameObject marker = kvp.Value;
+            marker.SetActive(false);
+            Debug.Log($"[MarkerActivator] Deactivated marker: {marker.name}");
+        }
     }
 
     private void CacheScenarioTrafficCars()
@@ -90,6 +106,39 @@ public class MarkerActivator : MonoBehaviour
         Debug.Log($"[MarkerActivator] Cached {regularTrafficCarDictionary.Count} other traffic cars.");
     }
 
+    private void CacheStreetCarts()
+    {
+        // Implement logic to manage traffic cars
+        GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
+
+        // cache the traffic cars
+        foreach (GameObject cart in streetCarts)
+        {
+            scenarioStreetCarts[cart.name.ToLower()] = cart;
+            markerTags[cart.name.ToLower()] = cart.tag;
+            Debug.Log($"[MarkerActivator] Cached street cart: {cart.name}");
+        }
+        Debug.Log($"[MarkerActivator] Cached {scenarioStreetCarts.Count} street carts.");
+    }
+
+
+    private void CacheAdditionalStopSigns()
+    {
+        // Implement logic to manage traffic cars
+        GameObject[] additionalStopSigns = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
+
+        // cache the traffic cars
+        foreach (GameObject stopSign in additionalStopSigns)
+        {
+            scenarioAddStopSigns[stopSign.name.ToLower()] = stopSign;
+            markerTags[stopSign.name.ToLower()] = stopSign.tag;
+            stopSign.SetActive(false);
+            Debug.Log($"[MarkerActivator] Cached additional stop sign: {stopSign.name}");
+        }
+        Debug.Log($"[MarkerActivator] Cached {additionalStopSigns.Length} additional stop signs.");
+
+        Debug.Log($"[MarkerActivator] Cached marker tags: {string.Join(", ", markerTags.Values)}");
+    }
 
     void OnTriggerEnter(Collider other)
     {
@@ -101,8 +150,8 @@ public class MarkerActivator : MonoBehaviour
             if (int.TryParse(other.name.Split('_')[1], out markerNumber) && !passedMarkers.Contains(markerNumber))
             {
                 passedMarkers.Add(markerNumber);
-                markersPassed++;
-                Debug.Log($"Passed ProgressMarker: {markerNumber}");
+                N_markersPassed++;
+                Debug.Log($"Passed ProgressMarker: {markerNumber}. Total markers passed in lap: {N_markersPassed}");
 
                 // Check and activate markers for a new scenario
                 scenarioManager = FindObjectOfType<ScenarioManagerStartle>(); // Ensure latest instance
@@ -133,6 +182,10 @@ public class MarkerActivator : MonoBehaviour
                         endTrial = true;
                         Debug.Log("End of trial reached.");
                     }
+
+                    // Reset marker number
+                    N_markersPassed = 0;
+                    passedMarkers.Clear();
                 }
             }
         }
@@ -235,6 +288,13 @@ public class MarkerActivator : MonoBehaviour
         ActivateInteractionObjects();
         RemoveUnwantedCars();
 
+        if (!intersectionSceneObjectsCached){
+            CacheStreetCarts();
+            CacheAdditionalStopSigns();
+            intersectionSceneObjectsCached = true;
+        }
+
+
         // Activate pedestrians towards the start of the lap only for confusion alert
         if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "confusion")
         {
@@ -248,33 +308,25 @@ public class MarkerActivator : MonoBehaviour
             Debug.Log($"[MarkerActivator] Deactivating pedestrians.");
         }
 
-        // // Activate additional stop signs for music frustration scenario
-        // if (scenarioManager.currentScenario == "music" && scenarioManager.currentStimulus == "frustration")
-        // {
-        //     ActivateAdditionalStopMarkers();
-        // }
-        // else
-        // {
-        //     DeactivateAdditionalStopMarkers();
-        // }
-
+        // Activate additional stop signs for music frustration scenario
+        if (scenarioManager.currentScenario == "music" && scenarioManager.currentStimulus == "frustration")
+        {
+            ActivateAdditionalStopMarkers();
+        }
+        else
+        {
+            DeactivateAdditionalStopMarkers();
+        }
 
         
-        // if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "surprise")
-        // {
-        //     ActivateStreetCart();
-        //     cartActivated = true;
-        // }
-        // else
-        // {
-        //     // Deactivate street cart
-        //     GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
-        //     foreach (GameObject cart in streetCarts)
-        //     {
-        //         cart.SetActive(false);
-        //         Debug.Log($"Deactivated street cart: {cart.name}");
-        //     }
-        // }
+        if (scenarioManager.currentScenario == "alert" && scenarioManager.currentStimulus == "surprise")
+        {
+            ActivateStreetCart();
+        }
+        else
+        {
+            DeactivateStreetCart();
+        }
     }
 
 
@@ -368,27 +420,33 @@ public class MarkerActivator : MonoBehaviour
     //     }
     // }
 
-    // private void ActivateAdditionalStopMarkers()
-    // {
+    private void ActivateAdditionalStopMarkers()
+    {
         
-    //     GameObject[] stopSignMarkersObjects = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
-    //     foreach (GameObject stopSignMarker in stopSignMarkersObjects)
-    //     {
-    //         stopSignMarker.SetActive(true);
-    //         Debug.Log($"Activated additional stop marker/object: {stopSignMarker.name}");
-    //     }
-    // }
+       // From cached objects
+        foreach (var kvp in scenarioAddStopSigns)
+        {
+            string stopSignName = kvp.Key;
+            GameObject stopSign = kvp.Value;
+            stopSign.SetActive(true);
+            Debug.Log($"Activated additional stop marker/object: {stopSign.name}");
 
-    // private void DeactivateAdditionalStopMarkers()
-    // {
+        }
+    }
+
+    private void DeactivateAdditionalStopMarkers()
+    {
         
-    //     GameObject[] stopSignMarkersObjects = GameObject.FindGameObjectsWithTag("AdditionalStopSign");
-    //     foreach (GameObject stopSignMarker in stopSignMarkersObjects)
-    //     {
-    //         stopSignMarker.SetActive(false);
-    //         Debug.Log($"Activated additional stop marker/object: {stopSignMarker.name}");
-    //     }
-    // }
+       // From cached objects
+        foreach (var kvp in scenarioAddStopSigns)
+        {
+            string stopSignName = kvp.Key;
+            GameObject stopSign = kvp.Value;
+            stopSign.SetActive(false);
+            Debug.Log($"Deactivated additional stop marker/object: {stopSign.name}");
+
+        }
+    }
 
 
     private void ActivateScenarioTrafficCars()
@@ -419,32 +477,31 @@ public class MarkerActivator : MonoBehaviour
     }
 
 
-    // private void ActivateStreetCart()
-    // {
-    //     // Implement logic to manage traffic cars
-    //     GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
+    private void ActivateStreetCart()
+    {
+        // Implement logic to manage street carts from cached carts
+        foreach (var kvp in scenarioStreetCarts)
+        {
+            string cartName = kvp.Key;
+            GameObject cart = kvp.Value;
+            cart.SetActive(true);
+            Debug.Log($"Activated street cart: {cart.name}");
+        }
+    }
 
-    //     Debug.Log($"[MarkerActivator] Found {streetCarts.Length} street carts.");
 
-    //     foreach (GameObject cart in streetCarts)
-    //     {
-    //         cart.SetActive(true);
-    //     }
-    // }
+    private void DeactivateStreetCart()
+    {
+        // Implement logic to manage street carts from cached carts
+        foreach (var kvp in scenarioStreetCarts)
+        {
+            string cartName = kvp.Key;
+            GameObject cart = kvp.Value;
+            cart.SetActive(false);
+            Debug.Log($"Deactivated street cart: {cart.name}");
+        }
+    }
 
-
-    // private void DeactivateStreetCart()
-    // {
-    //     // Implement logic to manage traffic cars
-    //     GameObject[] streetCarts = GameObject.FindGameObjectsWithTag("StreetCart");
-
-    //     Debug.Log($"[MarkerActivator] Found {streetCarts.Length} street carts.");
-
-    //     foreach (GameObject cart in streetCarts)
-    //     {
-    //         cart.SetActive(false);
-    //     }
-    // }
 
     private void ResetRegularTrafficCars()
     {
@@ -506,7 +563,7 @@ public class MarkerActivator : MonoBehaviour
     // {
         
     //     currentLap++;
-    //     markersPassed = 0;
+    //     N_markersPassed = 0;
     //     passedMarkers.Clear();
     //     interactionMarkersActivated = false;
 
@@ -521,7 +578,7 @@ public class MarkerActivator : MonoBehaviour
     public void ResetSimulation()
     {
         
-        markersPassed = 0;
+        N_markersPassed = 0;
         passedMarkers.Clear();
         
         // Reset regular traffic cars
@@ -543,7 +600,8 @@ public class MarkerActivator : MonoBehaviour
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("InteractionMarkers") || other.CompareTag("EcoMarker") || other.CompareTag("StopMarker") || other.CompareTag("NormalMarker") || other.CompareTag("SportyMarker"))
+        if (other.CompareTag("InteractionMarkers") || other.CompareTag("EcoMarker") || other.CompareTag("StopMarker") || other.CompareTag("NormalMarker") || other.CompareTag("SportyMarker") 
+            || other.CompareTag("AdditionalStopSign") || other.CompareTag("StreetCart"))
         {
             // Deactivate the marker
             other.gameObject.SetActive(false);
